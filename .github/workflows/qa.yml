@@ -7,8 +7,8 @@ on:
 # ── Config ───────────────────────────────────────────────────────────────────
 env:
   APP_NAME: AuditAI
-  STAGING_URL: https://auditai-staging.vercel.app      # update once Vercel is linked
-  PRODUCTION_URL: https://auditai.vercel.app            # update once Vercel is linked
+  STAGING_URL: https://auditai-git-staging-jeromeibanez95-7178s-projects.vercel.app
+  PRODUCTION_URL: https://auditai-dusky.vercel.app
   NOTIFY_EMAIL: jeromeibanez95@gmail.com
   TARGET_REPO: JeromeIbanez/auditai
   STAGING_BRANCH: staging
