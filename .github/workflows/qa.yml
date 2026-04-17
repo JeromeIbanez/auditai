@@ -1,0 +1,106 @@
+name: QA
+
+on:
+  push:
+    branches: [staging]
+
+# ── Config ───────────────────────────────────────────────────────────────────
+env:
+  APP_NAME: AuditAI
+  STAGING_URL: https://auditai-staging.vercel.app      # update once Vercel is linked
+  PRODUCTION_URL: https://auditai.vercel.app            # update once Vercel is linked
+  NOTIFY_EMAIL: jeromeibanez95@gmail.com
+  TARGET_REPO: JeromeIbanez/auditai
+  STAGING_BRANCH: staging
+  PRODUCTION_BRANCH: main
+
+jobs:
+  ci:
+    name: Type-check & build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+      - name: Type-check
+        run: npx tsc --noEmit
+
+      - name: Build
+        run: npm run build
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
+          CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          AI_PROVIDER: openai
+
+  qa:
+    name: QA agent
+    runs-on: ubuntu-latest
+    needs: ci
+    steps:
+      - name: Checkout AuditAI
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          token: ${{ secrets.GH_TOKEN }}
+
+      - name: Checkout QA agent
+        uses: actions/checkout@v4
+        with:
+          repository: JeromeIbanez/temujin-qa-agent
+          path: .qa-agent
+          token: ${{ secrets.GH_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install QA agent dependencies
+        run: pip install -r .qa-agent/requirements.txt
+
+      - name: Install Playwright browsers
+        run: playwright install --with-deps chromium
+
+      - name: Wait for staging deployment
+        run: |
+          for i in $(seq 1 15); do
+            STATUS=$(curl -s -L -o /dev/null -w "%{http_code}" ${{ env.STAGING_URL }} || echo "000")
+            if [ "$STATUS" = "200" ]; then echo "Staging is ready." && exit 0; fi
+            echo "Attempt $i: got $STATUS, retrying in 20s..."
+            sleep 20
+          done
+          echo "Staging did not become ready after 5 minutes." && exit 1
+
+      - name: Load QA agent config
+        run: echo "AGENT_CONFIG=$(cat .qa-agent.yml)" >> $GITHUB_ENV
+
+      - name: Run QA orchestrator
+        env:
+          STAGING_URL: ${{ env.STAGING_URL }}
+          PRODUCTION_URL: ${{ env.PRODUCTION_URL }}
+          NOTIFY_EMAIL: ${{ env.NOTIFY_EMAIL }}
+          APP_NAME: ${{ env.APP_NAME }}
+          GITHUB_REPO: ${{ env.TARGET_REPO }}
+          STAGING_BRANCH: ${{ env.STAGING_BRANCH }}
+          PRODUCTION_BRANCH: ${{ env.PRODUCTION_BRANCH }}
+          COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
+          COMMIT_SHA: ${{ github.sha }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          GMAIL_USER: ${{ secrets.GMAIL_USER }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+        run: python .qa-agent/scripts/orchestrate.py

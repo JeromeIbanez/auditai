@@ -1,0 +1,23 @@
+custom_context: |
+  This is AuditAI — an AI adoption platform built with Next.js 15, Prisma 7, Clerk, and the Vercel AI SDK.
+  Key risk areas: Prisma schema changes (require migrations), Clerk auth changes, AI prompt logic in /api routes,
+  and the scoring algorithm in src/lib/scoring.ts (encodes the audit methodology).
+
+complex_criteria:
+  - New features or significant functionality changes
+  - Database schema changes (Prisma migrations)
+  - API contract changes (new/removed/renamed endpoints or fields)
+  - Authentication or security-related changes (Clerk config, proxy.ts)
+  - Changes to payment or billing logic (Stripe)
+  - Changes to src/lib/scoring.ts (core audit methodology)
+  - Changes to AI prompts in API routes
+  - Large refactors touching many files
+  - Environment variable or secrets changes
+
+simple_criteria:
+  - UI text, copy, or layout changes only
+  - Small bug fixes with no logic changes
+  - shadcn component additions
+  - Tailwind class adjustments
+  - Dependency minor version bumps
+  - README or documentation updates
