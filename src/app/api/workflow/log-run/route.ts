@@ -8,6 +8,13 @@ export async function POST(req: Request) {
 
   const { workflowId, minutesSaved } = await req.json()
 
+  if (minutesSaved !== null && minutesSaved !== undefined) {
+    const mins = Number(minutesSaved)
+    if (!Number.isInteger(mins) || mins < 1 || mins > 1440) {
+      return NextResponse.json({ error: 'minutesSaved must be an integer between 1 and 1440' }, { status: 400 })
+    }
+  }
+
   const workflow = await prisma.workflow.findFirst({
     where: { id: workflowId, audit: { userId } },
   })

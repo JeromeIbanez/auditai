@@ -19,7 +19,7 @@ export async function POST(req: Request) {
   })
   if (!workflow) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
-  const prompt = await prisma.prompt.findUnique({ where: { id: promptId } })
+  const prompt = await prisma.prompt.findUnique({ where: { id: promptId, workflowId } })
   if (!prompt) return NextResponse.json({ error: 'Prompt not found' }, { status: 404 })
 
   // Get ratings for this prompt

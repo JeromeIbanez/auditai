@@ -1,3 +1,5 @@
+import { auth } from '@clerk/nextjs/server'
+import { NextResponse } from 'next/server'
 import { streamText } from 'ai'
 import { getModel } from '@/lib/ai'
 import { computeScore, getApplicability, getAutomationMode } from '@/lib/scoring'
@@ -6,6 +8,9 @@ import { AuditContextInput, TaskInput } from '@/lib/types'
 export const maxDuration = 60
 
 export async function POST(req: Request) {
+  const { userId } = await auth()
+  if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
   const { context, tasks }: { context: AuditContextInput; tasks: TaskInput[] } = await req.json()
 
   const taskSummary = tasks
