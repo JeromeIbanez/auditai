@@ -38,7 +38,7 @@ export function StepReport({ context, tasks, onBack }: Props) {
   const abortRef = useRef<AbortController | null>(null)
 
   const sortedTasks = [...tasks].sort((a, b) => computeScore(b) - computeScore(a))
-  const highOpportunities = sortedTasks.filter((t) => getApplicability(t) === 'HIGH')
+  const actionableOpportunities = sortedTasks.filter((t) => getApplicability(t) !== 'LOW')
 
   useEffect(() => {
     generateReport()
@@ -153,7 +153,7 @@ export function StepReport({ context, tasks, onBack }: Props) {
       </Card>
 
       {/* CTA */}
-      {!isStreaming && narrative && highOpportunities.length > 0 && (
+      {!isStreaming && narrative && actionableOpportunities.length > 0 && (
         <>
           <Separator />
           <Card className="border-primary/20 bg-primary/5">
@@ -163,7 +163,7 @@ export function StepReport({ context, tasks, onBack }: Props) {
                 <div className="space-y-3 flex-1">
                   <div>
                     <p className="font-semibold">
-                      {highOpportunities.length} high-priority {highOpportunities.length === 1 ? 'opportunity' : 'opportunities'} ready to implement
+                      {actionableOpportunities.length} {actionableOpportunities.length === 1 ? 'opportunity' : 'opportunities'} ready to implement
                     </p>
                     <p className="text-sm text-muted-foreground mt-1">
                       Save your audit and activate workflows directly from your dashboard.
