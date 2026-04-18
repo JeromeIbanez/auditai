@@ -166,7 +166,7 @@ export function StepReport({ context, tasks, onBack }: Props) {
                       {highOpportunities.length} high-priority {highOpportunities.length === 1 ? 'opportunity' : 'opportunities'} ready to implement
                     </p>
                     <p className="text-sm text-muted-foreground mt-1">
-                      Create a free account to activate a workflow, get a prompt library tailored to your team, and track time savings.
+                      Save your audit and activate workflows directly from your dashboard.
                     </p>
                   </div>
                               <Button
@@ -180,21 +180,15 @@ export function StepReport({ context, tasks, onBack }: Props) {
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ context, tasks, narrative }),
                           })
-                          if (res.status === 401) {
-                            // Stash audit in sessionStorage, recover after sign-up
-                            sessionStorage.setItem('pendingAudit', JSON.stringify({ context, tasks, narrative }))
-                            router.push('/sign-up')
-                            return
-                          }
-                          const { auditId } = await res.json()
-                          router.push(`/audit/${auditId}`)
+                          if (!res.ok) throw new Error(await res.text())
+                          router.push('/dashboard')
                         } finally {
                           setSaving(false)
                         }
                       }}
                     >
                       {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />}
-                      Start implementing
+                      Save to dashboard
                     </Button>
                 </div>
               </div>

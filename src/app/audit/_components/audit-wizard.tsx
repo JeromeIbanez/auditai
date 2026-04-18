@@ -32,7 +32,7 @@ export function AuditWizard() {
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center justify-between mb-3">
-            <a href="/" className="text-sm font-semibold tracking-tight">AuditAI</a>
+            <a href="/dashboard" className="text-sm font-semibold tracking-tight">AuditAI</a>
             <span className="text-sm text-muted-foreground">
               Step {state.step + 1} of {STEPS.length} — {STEPS[state.step]}
             </span>
