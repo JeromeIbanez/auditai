@@ -1,12 +1,8 @@
-import { auth } from '@clerk/nextjs/server'
 import { streamText } from 'ai'
 import { getModel } from '@/lib/ai'
 import { apiError } from '@/lib/api-error'
 
 export async function POST(req: Request) {
-  const { userId } = await auth()
-  if (!userId) return new Response('Unauthorized', { status: 401 })
-
   const { task, context, messages } = await req.json()
 
   const systemPrompt = `You are helping assess AI opportunities for a ${context.department} team at ${context.company} (${context.teamSize} people). Their tools: ${context.tools?.join(', ') || 'not specified'}.

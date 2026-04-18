@@ -1,4 +1,3 @@
-import { auth } from '@clerk/nextjs/server'
 import { generateObject } from 'ai'
 import { z } from 'zod'
 import { getModel } from '@/lib/ai'
@@ -14,9 +13,6 @@ const ScoreSchema = z.object({
 })
 
 export async function POST(req: Request) {
-  const { userId } = await auth()
-  if (!userId) return new Response('Unauthorized', { status: 401 })
-
   const { task, context, messages } = await req.json()
 
   const systemPrompt = `Based on a conversation about the task "${task.name}" for a ${context.department} team, extract 6 dimension scores.
