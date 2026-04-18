@@ -86,7 +86,10 @@ jobs:
           echo "Staging did not become ready after 5 minutes." && exit 1
 
       - name: Load QA agent config
-        run: echo "AGENT_CONFIG=$(cat .qa-agent.yml)" >> $GITHUB_ENV
+        run: |
+          echo "AGENT_CONFIG<<EOF" >> $GITHUB_ENV
+          cat .qa-agent.yml >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
 
       - name: Run QA orchestrator
         env:
