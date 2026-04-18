@@ -5,7 +5,7 @@
 - **All code changes go to `staging` first.** Always `git checkout staging` before making any changes.
 - **Push to `origin/staging` automatically** after every commit — no need to ask Jerome.
 - **Never push to `main` directly.** `main` has branch protection: PRs require 1 approving review (Jerome) and the CI check must pass. Direct pushes are blocked by GitHub.
-- **The QA pipeline auto-merges SIMPLE changes** (UI copy, layout tweaks, minor bug fixes with no logic changes) via the temujin-qa-agent after CI passes.
+- **The QA pipeline auto-merges SIMPLE changes** via PR — the agent creates a PR and immediately calls `pr.merge()`. Every production deploy leaves a PR in the history.
 - **COMPLEX changes always require Jerome's explicit approval.** The QA agent opens a PR — Jerome reviews and merges it. Approval phrases when Jerome says the word: "do it", "push to prod", "push to production", "looks good", "ship it".
 - When Jerome approves manually: `git checkout main && git merge staging && git push origin main`, then sync back: `git checkout staging && git merge main && git push origin staging`.
 
