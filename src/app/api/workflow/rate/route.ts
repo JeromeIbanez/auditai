@@ -1,6 +1,7 @@
 import { auth } from '@clerk/nextjs/server'
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { apiError } from '@/lib/api-error'
 
 export async function POST(req: Request) {
   const { userId } = await auth()
@@ -18,9 +19,12 @@ export async function POST(req: Request) {
   })
   if (!workflow) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
-  const rating = await prisma.rating.create({
-    data: { workflowId, promptId: promptId ?? null, score, feedback: feedback || null },
-  })
-
-  return NextResponse.json({ ratingId: rating.id })
+  try {
+    const rating = await prisma.rating.create({
+      data: { workflowId, promptId: promptId ?? null, score, feedback: feedback || null },
+    })
+    return NextResponse.json({ ratingId: rating.id })
+  } catch (e) {
+    return apiError('Failed to save rating', 500, 'workflow/rate', e)
+  }
 }

@@ -2,6 +2,7 @@ import { auth } from '@clerk/nextjs/server'
 import { NextResponse } from 'next/server'
 import { generateText } from 'ai'
 import { getModel } from '@/lib/ai'
+import { apiError } from '@/lib/api-error'
 import { prisma } from '@/lib/prisma'
 
 export async function POST(req: Request) {
@@ -18,6 +19,8 @@ export async function POST(req: Request) {
     },
   })
   if (!workflow) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+
+  try {
 
   const prompt = await prisma.prompt.findUnique({ where: { id: promptId, workflowId } })
   if (!prompt) return NextResponse.json({ error: 'Prompt not found' }, { status: 404 })
@@ -68,4 +71,8 @@ Write an improved version of this prompt.`,
   })
 
   return NextResponse.json({ prompt: improved })
+
+  } catch (e) {
+    return apiError('Failed to improve prompt', 500, 'workflow/improve-prompt', e)
+  }
 }

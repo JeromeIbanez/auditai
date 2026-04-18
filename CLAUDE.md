@@ -4,10 +4,22 @@
 
 - **All code changes go to `staging` first.** Always `git checkout staging` before making any changes.
 - **Push to `origin/staging` automatically** after every commit — no need to ask Jerome.
-- **Never push to `main` unless Jerome explicitly approves.** Approval phrases: "do it", "push to prod", "push to production", "looks good", "ship it", or equivalent.
-- When Jerome approves: `git checkout main && git merge staging && git push origin main`, then sync back: `git checkout staging && git merge main && git push origin staging`.
+- **Never push to `main` directly.** `main` has branch protection: PRs require 1 approving review (Jerome) and the CI check must pass. Direct pushes are blocked by GitHub.
+- **The QA pipeline auto-merges SIMPLE changes** via PR — the agent creates a PR and immediately calls `pr.merge()`. Every production deploy leaves a PR in the history.
+- **COMPLEX changes always require Jerome's explicit approval.** The QA agent opens a PR — Jerome reviews and merges it. Approval phrases when Jerome says the word: "do it", "push to prod", "push to production", "looks good", "ship it".
+- When Jerome approves manually: `git checkout main && git merge staging && git push origin main`, then sync back: `git checkout staging && git merge main && git push origin staging`.
 
-**`main` = production. Do not touch it until told to.**
+**`main` = production. GitHub enforces this — it cannot be bypassed.**
+
+### What counts as COMPLEX (always needs Jerome's approval):
+- New features or significant functionality changes
+- Database schema changes (Prisma migrations)
+- API contract changes
+- Auth or security changes (`src/proxy.ts`, Clerk config)
+- Changes to `src/lib/scoring.ts` (core audit methodology)
+- Changes to AI prompts in API routes
+- Large refactors touching many files
+- Environment variable or secrets changes
 
 ## Stack
 
