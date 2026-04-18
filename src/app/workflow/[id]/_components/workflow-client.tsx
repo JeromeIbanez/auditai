@@ -51,7 +51,9 @@ function PromptCard({
   const [feedback, setFeedback] = useState(existingRating?.feedback ?? '')
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(!!existingRating)
+  const [ratingError, setRatingError] = useState('')
   const [improving, setImproving] = useState(false)
+  const [improveError, setImproveError] = useState('')
 
   const copy = async () => {
     await navigator.clipboard.writeText(prompt.content)
@@ -62,13 +64,17 @@ function PromptCard({
   const submitRating = async (score: number) => {
     setRating(score)
     setSaving(true)
+    setRatingError('')
     try {
-      await fetch('/api/workflow/rate', {
+      const res = await fetch('/api/workflow/rate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ workflowId, promptId: prompt.id, score, feedback }),
       })
+      if (!res.ok) throw new Error(await res.text())
       setSaved(true)
+    } catch {
+      setRatingError('Failed to save rating')
     } finally {
       setSaving(false)
     }
@@ -76,14 +82,18 @@ function PromptCard({
 
   const improvePrompt = async () => {
     setImproving(true)
+    setImproveError('')
     try {
       const res = await fetch('/api/workflow/improve-prompt', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ promptId: prompt.id, workflowId }),
       })
+      if (!res.ok) throw new Error(await res.text())
       const { prompt: newPrompt } = await res.json()
       onImproved(newPrompt)
+    } catch {
+      setImproveError('Failed to improve prompt')
     } finally {
       setImproving(false)
     }
@@ -138,6 +148,7 @@ function PromptCard({
             {saving && <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground ml-2" />}
             {saved && !saving && <Check className="h-3.5 w-3.5 text-green-600 ml-2" />}
           </div>
+          {ratingError && <p className="text-xs text-destructive">{ratingError}</p>}
           {rating > 0 && (
             <Textarea
               placeholder="What worked? What didn't? (optional)"
@@ -151,18 +162,21 @@ function PromptCard({
 
         {/* Improve */}
         {rating > 0 && (
-          <Button
-            variant="outline"
-            size="sm"
-            className="gap-2"
-            onClick={improvePrompt}
-            disabled={improving}
-          >
-            {improving
-              ? <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Improving…</>
-              : <><Wand2 className="h-3.5 w-3.5" /> Regenerate improved version</>
-            }
-          </Button>
+          <div className="space-y-1">
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-2"
+              onClick={improvePrompt}
+              disabled={improving}
+            >
+              {improving
+                ? <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Improving…</>
+                : <><Wand2 className="h-3.5 w-3.5" /> Regenerate improved version</>
+              }
+            </Button>
+            {improveError && <p className="text-xs text-destructive">{improveError}</p>}
+          </div>
         )}
       </CardContent>
     </Card>
@@ -173,20 +187,25 @@ function LogRunCard({ workflowId, runsCount, timeSavedPerRun }: { workflowId: st
   const router = useRouter()
   const [minutes, setMinutes] = useState(timeSavedPerRun > 0 ? String(timeSavedPerRun) : '')
   const [logging, setLogging] = useState(false)
+  const [logError, setLogError] = useState('')
   const [runs, setRuns] = useState(runsCount)
   const totalHours = Math.round((runs * (timeSavedPerRun || Number(minutes) || 0)) / 60 * 10) / 10
 
   const logRun = async () => {
     setLogging(true)
+    setLogError('')
     try {
       const res = await fetch('/api/workflow/log-run', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ workflowId, minutesSaved: Number(minutes) || null }),
       })
+      if (!res.ok) throw new Error(await res.text())
       const data = await res.json()
       setRuns(data.runsCount)
       router.refresh()
+    } catch {
+      setLogError('Failed to log run')
     } finally {
       setLogging(false)
     }
@@ -228,6 +247,7 @@ function LogRunCard({ workflowId, runsCount, timeSavedPerRun }: { workflowId: st
             Log run
           </Button>
         </div>
+        {logError && <p className="text-xs text-destructive">{logError}</p>}
       </CardContent>
     </Card>
   )
@@ -238,21 +258,26 @@ export function WorkflowClient({ workflowId, initialStatus, prompts: initialProm
   const [status, setStatus] = useState(initialStatus)
   const [prompts, setPrompts] = useState<Prompt[]>(initialPrompts)
   const [advancing, setAdvancing] = useState(false)
+  const [advanceError, setAdvanceError] = useState('')
 
   const ratingByPrompt = Object.fromEntries(ratings.map((r) => [r.promptId, r]))
   const statusInfo = STATUS_LABELS[status]
 
   const advanceStatus = async () => {
     setAdvancing(true)
+    setAdvanceError('')
     try {
       const res = await fetch('/api/workflow/status', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ workflowId }),
       })
+      if (!res.ok) throw new Error(await res.text())
       const { status: next } = await res.json()
       setStatus(next)
       router.refresh()
+    } catch {
+      setAdvanceError('Failed to update status')
     } finally {
       setAdvancing(false)
     }
@@ -272,12 +297,15 @@ export function WorkflowClient({ workflowId, initialStatus, prompts: initialProm
           <Badge className={`text-xs ${statusColors[status]}`}>{statusInfo.label}</Badge>
           <span className="text-xs text-muted-foreground">{prompts.length} prompts</span>
         </div>
-        {statusInfo.action && (
-          <Button size="sm" variant="outline" className="gap-2" onClick={advanceStatus} disabled={advancing}>
-            {advancing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ArrowRight className="h-3.5 w-3.5" />}
-            {statusInfo.action}
-          </Button>
-        )}
+        <div className="flex flex-col items-end gap-1">
+          {statusInfo.action && (
+            <Button size="sm" variant="outline" className="gap-2" onClick={advanceStatus} disabled={advancing}>
+              {advancing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ArrowRight className="h-3.5 w-3.5" />}
+              {statusInfo.action}
+            </Button>
+          )}
+          {advanceError && <p className="text-xs text-destructive">{advanceError}</p>}
+        </div>
       </div>
 
       {status === 'DRAFT' && (

@@ -2,6 +2,7 @@ import { auth } from '@clerk/nextjs/server'
 import { NextResponse } from 'next/server'
 import { streamText } from 'ai'
 import { getModel } from '@/lib/ai'
+import { apiError } from '@/lib/api-error'
 import { computeScore, getApplicability, getAutomationMode } from '@/lib/scoring'
 import { AuditContextInput, TaskInput } from '@/lib/types'
 
@@ -10,6 +11,8 @@ export const maxDuration = 60
 export async function POST(req: Request) {
   const { userId } = await auth()
   if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  try {
 
   const { context, tasks }: { context: AuditContextInput; tasks: TaskInput[] } = await req.json()
 
@@ -57,9 +60,14 @@ List tasks that scored poorly or carry too much risk, with a brief reason for ea
 
 ## Recommended Next Steps
 3 concrete actions with suggested owners and a timeline. Be specific.`,
+    onError: ({ error }) => console.error('[audit/report] streamText error', error),
   })
 
   return new Response(textStream, {
     headers: { 'Content-Type': 'text/plain; charset=utf-8' },
   })
+
+  } catch (e) {
+    return apiError('Failed to generate report', 500, 'audit/report', e)
+  }
 }

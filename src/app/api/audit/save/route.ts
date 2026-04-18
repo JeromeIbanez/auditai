@@ -1,6 +1,7 @@
 import { auth } from '@clerk/nextjs/server'
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { apiError } from '@/lib/api-error'
 import { computeScore, getApplicability, getAutomationMode } from '@/lib/scoring'
 import { AuditContextInput, TaskInput } from '@/lib/types'
 
@@ -17,9 +18,11 @@ export async function POST(req: Request) {
   // Ensure user record exists
   const clerkUser = await fetch(`https://api.clerk.com/v1/users/${userId}`, {
     headers: { Authorization: `Bearer ${process.env.CLERK_SECRET_KEY}` },
-  }).then((r) => r.json()).catch(() => null)
+  }).then((r) => r.json()).catch((e) => { console.error('[audit/save] Clerk user fetch failed', e); return null })
 
   const email = clerkUser?.email_addresses?.[0]?.email_address ?? `${userId}@unknown.com`
+
+  try {
 
   await prisma.user.upsert({
     where: { id: userId },
@@ -60,4 +63,8 @@ export async function POST(req: Request) {
   })
 
   return NextResponse.json({ auditId: audit.id })
+
+  } catch (e) {
+    return apiError('Failed to save audit', 500, 'audit/save', e)
+  }
 }

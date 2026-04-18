@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server'
 import { generateObject } from 'ai'
 import { z } from 'zod'
 import { getModel } from '@/lib/ai'
+import { apiError } from '@/lib/api-error'
 import { prisma } from '@/lib/prisma'
 import { computeScore } from '@/lib/scoring'
 
@@ -23,6 +24,8 @@ export async function POST(req: Request) {
 
   const body = await req.json()
   const { auditId, taskId } = body
+
+  try {
 
   const audit = await prisma.audit.findUnique({
     where: { id: auditId, userId },
@@ -85,4 +88,8 @@ Requirements:
   })
 
   return NextResponse.json({ workflowId: workflow.id })
+
+  } catch (e) {
+    return apiError('Failed to activate workflow', 500, 'workflow/activate', e)
+  }
 }
