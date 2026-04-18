@@ -1,6 +1,7 @@
 import { auth } from '@clerk/nextjs/server'
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { apiError } from '@/lib/api-error'
 
 export async function POST(req: Request) {
   const { userId } = await auth()
@@ -20,16 +21,19 @@ export async function POST(req: Request) {
   })
   if (!workflow) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
-  const updated = await prisma.workflow.update({
-    where: { id: workflowId },
-    data: {
-      runsCount: { increment: 1 },
-      timeSavedPerRun: minutesSaved ?? workflow.timeSavedPerRun,
-    },
-  })
-
-  return NextResponse.json({
-    runsCount: updated.runsCount,
-    totalMinutesSaved: updated.runsCount * updated.timeSavedPerRun,
-  })
+  try {
+    const updated = await prisma.workflow.update({
+      where: { id: workflowId },
+      data: {
+        runsCount: { increment: 1 },
+        timeSavedPerRun: minutesSaved ?? workflow.timeSavedPerRun,
+      },
+    })
+    return NextResponse.json({
+      runsCount: updated.runsCount,
+      totalMinutesSaved: updated.runsCount * updated.timeSavedPerRun,
+    })
+  } catch (e) {
+    return apiError('Failed to log run', 500, 'workflow/log-run', e)
+  }
 }
