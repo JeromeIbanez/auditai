@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { Progress } from '@/components/ui/progress'
 import { StepContext } from './step-context'
 import { StepTasks } from './step-tasks'
-import { StepScore } from './step-score'
+import { StepScoreChat } from './step-score-chat'
 import { StepReport } from './step-report'
 import { AuditContextInput, TaskInput, WizardState } from '@/lib/types'
 
@@ -66,8 +66,9 @@ export function AuditWizard() {
             />
           )}
           {state.step === 2 && (
-            <StepScore
+            <StepScoreChat
               tasks={state.tasks}
+              context={state.context}
               onNext={(tasks: TaskInput[]) => setState((s) => ({ ...s, step: 3, tasks }))}
               onBack={() => setState((s) => ({ ...s, step: 1 }))}
             />
