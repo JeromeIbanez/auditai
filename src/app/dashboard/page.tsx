@@ -1,15 +1,15 @@
 import { auth } from '@clerk/nextjs/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { UserButton } from '@clerk/nextjs'
 import { prisma } from '@/lib/prisma'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { Separator } from '@/components/ui/separator'
-import { Plus, Zap, Clock, FileText, ArrowRight } from 'lucide-react'
+import { Zap, Clock, FileText, ArrowRight } from 'lucide-react'
 import { ActivateButton } from '@/app/audit/[id]/_components/activate-button'
+import { AppShell } from '@/components/app-shell'
 
 export const metadata = { title: 'Dashboard — AuditAI' }
 
@@ -97,21 +97,12 @@ export default async function DashboardPage() {
   const isEmpty = data && data.audits.length === 0
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="sticky top-0 z-10 bg-card/80 backdrop-blur border-b px-6 py-3.5 flex items-center justify-between">
-        <span className="font-semibold tracking-tight text-primary">AuditAI</span>
-        <div className="flex items-center gap-3">
-          <Link href="/audit">
-            <Button size="sm" className="gap-1.5 shadow-sm">
-              <Plus className="h-3.5 w-3.5" /> New audit
-            </Button>
-          </Link>
-          <UserButton />
+    <AppShell>
+      <main className="max-w-3xl mx-auto px-8 py-10 space-y-8">
+        <div>
+          <h1 className="text-xl font-semibold tracking-tight">Dashboard</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">Your AI workflow overview</p>
         </div>
-      </header>
-
-      <main className="max-w-4xl mx-auto px-6 py-10 space-y-10">
 
         {/* DB error */}
         {dbError && (
@@ -276,6 +267,6 @@ export default async function DashboardPage() {
         )}
 
       </main>
-    </div>
+    </AppShell>
   )
 }

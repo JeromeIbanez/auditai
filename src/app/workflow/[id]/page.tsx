@@ -3,9 +3,11 @@ import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
 import { prisma } from '@/lib/prisma'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { ArrowLeft, User, Bot, ArrowRightLeft } from 'lucide-react'
 import { WorkflowClient } from './_components/workflow-client'
+import { AppShell } from '@/components/app-shell'
 
 type Props = { params: Promise<{ id: string }> }
 
@@ -39,26 +41,24 @@ export default async function WorkflowPage({ params }: Props) {
       : null
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b px-6 py-4 flex items-center justify-between">
-        <Link
-          href={`/audit/${workflow.audit.id}`}
-          className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          {workflow.audit.company} / {workflow.audit.department}
-        </Link>
-        <span className="font-semibold tracking-tight">AuditAI</span>
-        <div className="w-32" />
-      </header>
+    <AppShell>
+      <main className="max-w-3xl mx-auto px-8 py-10 space-y-8">
+        {/* Breadcrumb */}
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Link href="/dashboard" className="hover:text-foreground transition-colors">Dashboard</Link>
+          <span>/</span>
+          <Link href={`/audit/${workflow.audit.id}`} className="hover:text-foreground transition-colors">{workflow.audit.company}</Link>
+          <span>/</span>
+          <span className="text-foreground">{workflow.task.name}</span>
+        </div>
 
-      <main className="max-w-3xl mx-auto px-6 py-10 space-y-8">
         <div>
-          <div className="flex items-center gap-3 mb-1">
-            <h1 className="text-2xl font-bold">{workflow.task.name}</h1>
+          <div className="flex items-center gap-3 mb-1.5">
+            <h1 className="text-xl font-semibold tracking-tight">{workflow.task.name}</h1>
+            <Badge className={`text-xs ${workflowStatusColors[workflow.status]}`}>{workflow.status}</Badge>
           </div>
           <p className="text-sm text-muted-foreground">
-            {workflow.audit.department} · {avgRating ? `⭐ ${avgRating} avg rating · ` : ''}{workflow.ratings.length} ratings · {workflow.runsCount} runs
+            {workflow.audit.department} · {avgRating ? `${avgRating} avg · ` : ''}{workflow.ratings.length} ratings · {workflow.runsCount} runs
           </p>
         </div>
 
@@ -134,6 +134,6 @@ export default async function WorkflowPage({ params }: Props) {
           timeSavedPerRun={workflow.timeSavedPerRun}
         />
       </main>
-    </div>
+    </AppShell>
   )
 }
