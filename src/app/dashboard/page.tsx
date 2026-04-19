@@ -99,12 +99,12 @@ export default async function DashboardPage() {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="border-b px-6 py-4 flex items-center justify-between">
-        <span className="font-semibold tracking-tight text-lg">AuditAI</span>
+      <header className="sticky top-0 z-10 bg-card/80 backdrop-blur border-b px-6 py-3.5 flex items-center justify-between">
+        <span className="font-semibold tracking-tight text-primary">AuditAI</span>
         <div className="flex items-center gap-3">
           <Link href="/audit">
-            <Button size="sm" className="gap-2">
-              <Plus className="h-4 w-4" /> New audit
+            <Button size="sm" className="gap-1.5 shadow-sm">
+              <Plus className="h-3.5 w-3.5" /> New audit
             </Button>
           </Link>
           <UserButton />
@@ -129,28 +129,37 @@ export default async function DashboardPage() {
         {/* Stats */}
         {data && (
           <div className="grid grid-cols-3 gap-4">
-            <Card>
-              <CardContent className="pt-6 pb-5">
-                <p className="text-3xl font-bold">{data.audits.length}</p>
-                <p className="text-sm text-muted-foreground mt-1 flex items-center gap-1.5">
-                  <FileText className="h-3.5 w-3.5" /> Audits
-                </p>
+            <Card className="shadow-sm">
+              <CardContent className="pt-5 pb-5">
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Audits</p>
+                  <div className="h-7 w-7 rounded-md bg-primary/10 flex items-center justify-center">
+                    <FileText className="h-3.5 w-3.5 text-primary" />
+                  </div>
+                </div>
+                <p className="text-3xl font-bold tracking-tight">{data.audits.length}</p>
               </CardContent>
             </Card>
-            <Card>
-              <CardContent className="pt-6 pb-5">
-                <p className="text-3xl font-bold">{data.workflows.length}</p>
-                <p className="text-sm text-muted-foreground mt-1 flex items-center gap-1.5">
-                  <Zap className="h-3.5 w-3.5" /> Workflows
-                </p>
+            <Card className="shadow-sm">
+              <CardContent className="pt-5 pb-5">
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Workflows</p>
+                  <div className="h-7 w-7 rounded-md bg-primary/10 flex items-center justify-center">
+                    <Zap className="h-3.5 w-3.5 text-primary" />
+                  </div>
+                </div>
+                <p className="text-3xl font-bold tracking-tight">{data.workflows.length}</p>
               </CardContent>
             </Card>
-            <Card>
-              <CardContent className="pt-6 pb-5">
-                <p className="text-3xl font-bold">{data.totalHoursSaved > 0 ? `${data.totalHoursSaved}h` : '—'}</p>
-                <p className="text-sm text-muted-foreground mt-1 flex items-center gap-1.5">
-                  <Clock className="h-3.5 w-3.5" /> Hours saved
-                </p>
+            <Card className="shadow-sm">
+              <CardContent className="pt-5 pb-5">
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Hours saved</p>
+                  <div className="h-7 w-7 rounded-md bg-primary/10 flex items-center justify-center">
+                    <Clock className="h-3.5 w-3.5 text-primary" />
+                  </div>
+                </div>
+                <p className="text-3xl font-bold tracking-tight">{data.totalHoursSaved > 0 ? `${data.totalHoursSaved}h` : '—'}</p>
               </CardContent>
             </Card>
           </div>
