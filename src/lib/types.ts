@@ -10,10 +10,25 @@ export const DEPARTMENTS = [
   'Legal',
 ] as const
 
+export const INDUSTRIES = [
+  'SaaS / Software',
+  'E-commerce',
+  'Healthcare',
+  'Financial Services',
+  'Agency / Consulting',
+  'Education',
+  'Real Estate',
+  'Media / Content',
+  'Manufacturing',
+  'Other',
+] as const
+
 export type Department = (typeof DEPARTMENTS)[number]
+export type Industry = (typeof INDUSTRIES)[number]
+
+export type StepType = 'TRIGGER' | 'AI' | 'HUMAN' | 'INTEGRATION' | 'OUTPUT'
 
 export type AuditContextInput = {
-  company: string
   department: string
   teamSize: number
   tools: string[]
@@ -22,7 +37,6 @@ export type AuditContextInput = {
 export type TaskInput = {
   id: string
   name: string
-  // 6 scoring dimensions (1–3)
   taskVolume: number
   repeatability: number
   dataSensitivity: number
@@ -35,4 +49,11 @@ export type WizardState = {
   step: 0 | 1 | 2 | 3
   context: AuditContextInput
   tasks: TaskInput[]
+}
+
+export type UserProfile = {
+  companyName: string
+  industry: string
+  tools: string[]
+  onboarded: boolean
 }

@@ -7,88 +7,104 @@ import { apiError } from '@/lib/api-error'
 import { prisma } from '@/lib/prisma'
 import { computeScore } from '@/lib/scoring'
 
+const stepSchema = z.object({
+  order: z.number(),
+  type: z.enum(['TRIGGER', 'AI', 'HUMAN', 'INTEGRATION', 'OUTPUT']),
+  tool: z.string().nullable().describe('Specific tool from the team\'s stack, or null'),
+  title: z.string().describe('Short action title, e.g. "Classify ticket"'),
+  description: z.string().describe('1-2 sentences: what happens at this step and why'),
+  prompt: z.string().nullable().describe('Full ready-to-use prompt for AI steps; null for all other types'),
+})
+
 const workflowSchema = z.object({
-  trigger: z.string().describe('When/what triggers this workflow (one sentence)'),
-  claudeDoes: z.array(z.string()).describe('Steps Claude handles end-to-end'),
-  humanDoes: z.array(z.string()).describe('Steps the human handles or reviews'),
-  handoffs: z.array(z.string()).describe('Handoff points — where human takes control'),
-  prompts: z.array(z.object({
-    title: z.string().describe('Short name for this prompt'),
-    content: z.string().describe('The full prompt text, ready to use'),
-  })).min(3).max(5).describe('3–5 starter prompts tailored to this task and team context'),
+  summary: z.string().describe('One sentence: what this workflow does and the key outcome'),
+  steps: z.array(stepSchema).min(3).max(8),
 })
 
 export async function POST(req: Request) {
   const { userId } = await auth()
   if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const body = await req.json()
-  const { auditId, taskId } = body
+  const { auditId, taskId } = await req.json()
 
   try {
-
-  const audit = await prisma.audit.findUnique({
-    where: { id: auditId, userId },
-    include: { tasks: true },
-  })
-
-  if (!audit) return NextResponse.json({ error: 'Audit not found' }, { status: 404 })
-
-  const task = audit.tasks.find((t) => t.id === taskId)
-  if (!task) return NextResponse.json({ error: 'Task not found' }, { status: 404 })
-
-  const allTasksSummary = audit.tasks
-    .sort((a, b) => b.totalScore - a.totalScore)
-    .map((t) => `- ${t.name} (score: ${t.totalScore}, mode: ${t.automationMode})`)
-    .join('\n')
-
-  const { object } = await generateObject({
-    model: getModel(),
-    schema: workflowSchema,
-    system: `You are an AI workflow designer building practical, implementable workflows.
-Context: ${audit.department} team at ${audit.company}, ${audit.teamSize} people, tools: ${audit.tools.join(', ') || 'not specified'}.
-Full audit context (all tasks):
-${allTasksSummary}`,
-    prompt: `Design a complete workflow for this specific task: "${task.name}"
-
-This task has been scored as: ${task.automationMode} mode (score ${computeScore({
-  taskVolume: task.taskVolume,
-  repeatability: task.repeatability,
-  dataSensitivity: task.dataSensitivity,
-  timeCost: task.timeCost,
-  errorRisk: task.errorRisk,
-  currentTooling: task.currentTooling,
-})}/42).
-
-Requirements:
-- The prompts must be specific to ${audit.department} in ${audit.company}, not generic
-- Each prompt should be ready to use — include placeholders like [CUSTOMER NAME] or [TOPIC] where input is needed
-- The workflow design must reflect the "${task.automationMode}" mode: ${task.automationMode === 'AUTOMATE' ? 'Claude handles end-to-end' : 'Claude drafts, human reviews'}
-- Keep it practical — no tool integrations required for v1, paste-and-run is fine`,
-  })
-
-  const workflow = await prisma.workflow.create({
-    data: {
-      auditId,
-      taskId,
-      trigger: object.trigger,
-      claudeDoes: object.claudeDoes,
-      humanDoes: object.humanDoes,
-      handoffs: object.handoffs,
-      prompts: {
-        create: object.prompts.map((p, i) => ({
-          title: p.title,
-          content: p.content,
-          version: 1,
-          isActive: true,
-        })),
+    const audit = await prisma.audit.findUnique({
+      where: { id: auditId, userId },
+      include: {
+        tasks: true,
+        user: { select: { companyName: true, industry: true, tools: true } },
       },
-    },
-    include: { prompts: true },
-  })
+    })
 
-  return NextResponse.json({ workflowId: workflow.id })
+    if (!audit) return NextResponse.json({ error: 'Audit not found' }, { status: 404 })
 
+    const task = audit.tasks.find((t) => t.id === taskId)
+    if (!task) return NextResponse.json({ error: 'Task not found' }, { status: 404 })
+
+    const score = computeScore({
+      taskVolume: task.taskVolume,
+      repeatability: task.repeatability,
+      dataSensitivity: task.dataSensitivity,
+      timeCost: task.timeCost,
+      errorRisk: task.errorRisk,
+      currentTooling: task.currentTooling,
+    })
+
+    const tools = audit.tools.length > 0 ? audit.tools : (audit.user.tools ?? [])
+    const toolList = tools.length > 0 ? tools.join(', ') : 'no specific tools specified'
+    const company = audit.user.companyName ?? 'this company'
+    const industry = audit.user.industry ?? ''
+
+    const modeInstructions =
+      task.automationMode === 'AUTOMATE'
+        ? 'AI handles the full process end-to-end. Minimize human steps — only include one at the end for final review or send.'
+        : 'AI drafts and assists. Include a HUMAN step for review before any output is sent or acted on. The human is in the loop at key decision points.'
+
+    const { object } = await generateObject({
+      model: getModel(),
+      schema: workflowSchema,
+      system: `You are an AI workflow architect. You design practical, tool-specific automation workflows for business teams.
+Company: ${company}${industry ? ` (${industry})` : ''}
+Department: ${audit.department} — ${audit.teamSize} people
+Team tools: ${toolList}
+
+Design rules:
+- TRIGGER: always first — what event or condition starts the workflow. Reference a specific tool if relevant.
+- AI: steps where Claude or an AI model does the work. MUST include a full, ready-to-use prompt with placeholders like [CUSTOMER NAME], [TICKET CONTENT]. The prompt must be specific to ${audit.department}, not generic.
+- HUMAN: steps where a person reviews, decides, or acts. Be specific about what they check.
+- INTEGRATION: steps involving a tool action (e.g. "Route ticket in Zendesk", "Update record in HubSpot"). Reference the specific tool from the team's stack.
+- OUTPUT: final step — what gets produced or sent.
+- Use the team's actual tools in step titles and descriptions wherever possible.
+- Prompts must be practical and copy-paste ready — not abstract descriptions.`,
+      prompt: `Design a complete workflow for: "${task.name}"
+
+Automation mode: ${task.automationMode} (score: ${score}/42)
+${modeInstructions}
+
+The workflow should directly reference the team's tools (${toolList}) where applicable.
+Each AI step must have a full, specific prompt ready to use — not a placeholder description.`,
+    })
+
+    const workflow = await prisma.workflow.create({
+      data: {
+        auditId,
+        taskId,
+        summary: object.summary,
+        steps: {
+          create: object.steps.map((s) => ({
+            order: s.order,
+            type: s.type,
+            tool: s.tool ?? null,
+            title: s.title,
+            description: s.description,
+            prompt: s.prompt ?? null,
+          })),
+        },
+      },
+      include: { steps: { orderBy: { order: 'asc' } } },
+    })
+
+    return NextResponse.json({ workflowId: workflow.id })
   } catch (e) {
     return apiError('Failed to activate workflow', 500, 'workflow/activate', e)
   }

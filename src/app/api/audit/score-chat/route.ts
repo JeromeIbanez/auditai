@@ -5,7 +5,7 @@ import { apiError } from '@/lib/api-error'
 export async function POST(req: Request) {
   const { task, context, messages } = await req.json()
 
-  const systemPrompt = `You are helping assess AI opportunities for a ${context.department} team at ${context.company} (${context.teamSize} people). Their tools: ${context.tools?.join(', ') || 'not specified'}.
+  const systemPrompt = `You are helping assess AI opportunities for a ${context.department} team of ${context.teamSize} people. Their tools: ${context.tools?.join(', ') || 'not specified'}.
 
 The task being assessed is: "${task.name}"
 

@@ -37,7 +37,7 @@ async function getDashboardData(userId: string) {
         include: {
           workflows: {
             include: {
-              prompts: { where: { isActive: true } },
+              steps: true,
               ratings: true,
             },
           },
@@ -47,25 +47,29 @@ async function getDashboardData(userId: string) {
     orderBy: { createdAt: 'desc' },
   })
 
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { companyName: true },
+  })
+
   const workflows = audits.flatMap((a) =>
     a.tasks.flatMap((t) =>
       t.workflows.map((w) => ({
         ...w,
         taskName: t.name,
         department: a.department,
-        company: a.company,
         auditId: a.id,
       }))
     )
   ).sort((a, b) => {
-    const order = { LIVE: 0, TESTING: 1, DRAFT: 2 }
+    const order: Record<string, number> = { LIVE: 0, TESTING: 1, DRAFT: 2 }
     return order[a.status] - order[b.status]
   })
 
   const openOpportunities = audits.flatMap((a) =>
     a.tasks
       .filter((t) => t.applicability !== 'LOW' && t.workflows.length === 0)
-      .map((t) => ({ ...t, auditId: a.id, company: a.company, department: a.department }))
+      .map((t) => ({ ...t, auditId: a.id, department: a.department }))
   ).sort((a, b) => b.totalScore - a.totalScore)
 
   const totalHoursSaved = workflows.reduce(
@@ -73,7 +77,7 @@ async function getDashboardData(userId: string) {
     0
   )
 
-  return { audits, workflows, openOpportunities, totalHoursSaved }
+  return { audits, workflows, openOpportunities, totalHoursSaved, companyName: user?.companyName }
 }
 
 export default async function DashboardPage() {
@@ -84,11 +88,12 @@ export default async function DashboardPage() {
   let dbError = false
 
   try {
-    await prisma.user.upsert({
+    const user = await prisma.user.upsert({
       where: { id: userId },
       update: {},
       create: { id: userId, email: `user-${userId}@placeholder.com` },
     })
+    if (!user.onboarded) redirect('/onboarding')
     data = await getDashboardData(userId)
   } catch {
     dbError = true
@@ -100,11 +105,12 @@ export default async function DashboardPage() {
     <AppShell>
       <main className="max-w-3xl mx-auto px-8 py-10 space-y-8">
         <div>
-          <h1 className="text-xl font-semibold tracking-tight">Dashboard</h1>
+          <h1 className="text-xl font-semibold tracking-tight">
+            {data?.companyName ? `${data.companyName}` : 'Dashboard'}
+          </h1>
           <p className="text-sm text-muted-foreground mt-0.5">Your AI workflow overview</p>
         </div>
 
-        {/* DB error */}
         {dbError && (
           <Card className="border-amber-200 bg-amber-50">
             <CardContent className="pt-4">
@@ -191,7 +197,7 @@ export default async function DashboardPage() {
                         <Badge className={`text-xs shrink-0 ${workflowStatusColors[w.status]}`}>{w.status}</Badge>
                       </div>
                       <p className="text-xs text-muted-foreground mt-0.5">
-                        {w.prompts.length} prompts · {w.ratings.length} ratings · {w.runsCount} runs
+                        {w.steps.length} steps · {w.ratings.length} ratings · {w.runsCount} runs
                       </p>
                     </div>
                     <Link href={`/workflow/${w.id}`} className="shrink-0">
@@ -222,7 +228,7 @@ export default async function DashboardPage() {
                         </Badge>
                       </div>
                       <div className="flex items-center gap-3">
-                        <p className="text-xs text-muted-foreground">{t.company} · {t.department} · {t.totalScore}/42</p>
+                        <p className="text-xs text-muted-foreground">{t.department} · {t.totalScore}/42</p>
                         <Progress value={(t.totalScore / 42) * 100} className="h-1 flex-1 max-w-[80px]" />
                       </div>
                     </div>
@@ -236,7 +242,7 @@ export default async function DashboardPage() {
           </section>
         )}
 
-        {/* Audits (tertiary) */}
+        {/* Audits */}
         {data && data.audits.length > 0 && (
           <section className="space-y-3">
             <Separator />
@@ -248,14 +254,12 @@ export default async function DashboardPage() {
                   <Link key={a.id} href={`/audit/${a.id}`}>
                     <div className="flex items-center justify-between gap-4 py-2.5 px-2 rounded-lg hover:bg-muted/50 transition-colors">
                       <div className="flex items-center gap-2 min-w-0">
-                        <span className="font-medium text-sm truncate">{a.company}</span>
+                        <span className="font-medium text-sm truncate">{a.department}</span>
                         <Badge variant="secondary" className="text-xs shrink-0">{a.department}</Badge>
                       </div>
                       <div className="flex items-center gap-3 shrink-0 text-xs text-muted-foreground">
                         <span>{a.tasks.length} tasks · {workflowCount} workflows</span>
-                        <span>
-                          {new Date(a.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
-                        </span>
+                        <span>{new Date(a.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</span>
                         <ArrowRight className="h-3.5 w-3.5" />
                       </div>
                     </div>
@@ -265,7 +269,6 @@ export default async function DashboardPage() {
             </div>
           </section>
         )}
-
       </main>
     </AppShell>
   )

@@ -15,55 +15,39 @@ export async function POST(req: Request) {
     narrative: string
   } = await req.json()
 
-  // Ensure user record exists
-  const clerkUser = await fetch(`https://api.clerk.com/v1/users/${userId}`, {
-    headers: { Authorization: `Bearer ${process.env.CLERK_SECRET_KEY}` },
-  }).then((r) => r.json()).catch((e) => { console.error('[audit/save] Clerk user fetch failed', e); return null })
-
-  const email = clerkUser?.email_addresses?.[0]?.email_address ?? `${userId}@unknown.com`
-
   try {
-
-  await prisma.user.upsert({
-    where: { id: userId },
-    update: {},
-    create: { id: userId, email },
-  })
-
-  const audit = await prisma.audit.create({
-    data: {
-      userId,
-      company: context.company,
-      department: context.department,
-      teamSize: context.teamSize,
-      tools: context.tools,
-      status: 'COMPLETE',
-      tasks: {
-        create: tasks.map((t, i) => {
-          const scores = {
-            taskVolume: t.taskVolume,
-            repeatability: t.repeatability,
-            dataSensitivity: t.dataSensitivity,
-            timeCost: t.timeCost,
-            errorRisk: t.errorRisk,
-            currentTooling: t.currentTooling,
-          }
-          return {
-            name: t.name,
-            order: i,
-            ...scores,
-            totalScore: computeScore(scores),
-            automationMode: getAutomationMode(scores),
-            applicability: getApplicability(scores),
-          }
-        }),
+    const audit = await prisma.audit.create({
+      data: {
+        userId,
+        department: context.department,
+        teamSize: context.teamSize,
+        tools: context.tools,
+        status: 'COMPLETE',
+        tasks: {
+          create: tasks.map((t, i) => {
+            const scores = {
+              taskVolume: t.taskVolume,
+              repeatability: t.repeatability,
+              dataSensitivity: t.dataSensitivity,
+              timeCost: t.timeCost,
+              errorRisk: t.errorRisk,
+              currentTooling: t.currentTooling,
+            }
+            return {
+              name: t.name,
+              order: i,
+              ...scores,
+              totalScore: computeScore(scores),
+              automationMode: getAutomationMode(scores),
+              applicability: getApplicability(scores),
+            }
+          }),
+        },
+        report: narrative ? { create: { narrative } } : undefined,
       },
-      report: narrative ? { create: { narrative } } : undefined,
-    },
-  })
+    })
 
-  return NextResponse.json({ auditId: audit.id })
-
+    return NextResponse.json({ auditId: audit.id })
   } catch (e) {
     return apiError('Failed to save audit', 500, 'audit/save', e)
   }

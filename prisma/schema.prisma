@@ -7,20 +7,24 @@ datasource db {
 }
 
 model User {
-  id        String   @id // Clerk user ID
-  email     String   @unique
-  createdAt DateTime @default(now())
-  audits    Audit[]
+  id          String   @id // Clerk user ID
+  email       String   @unique
+  companyName String?
+  industry    String?
+  tools       String[] // default tools shown in every audit
+  onboarded   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  audits Audit[]
 }
 
 model Audit {
   id         String      @id @default(cuid())
   userId     String
   user       User        @relation(fields: [userId], references: [id])
-  company    String
   department String
   teamSize   Int
-  tools      String[]
+  tools      String[]    // may override user defaults
   status     AuditStatus @default(IN_PROGRESS)
   createdAt  DateTime    @default(now())
   updatedAt  DateTime    @updatedAt
@@ -37,15 +41,14 @@ model AuditTask {
   name    String
   order   Int
 
-  // 6 scoring dimensions (1-3 scale)
-  taskVolume      Int // 1=rare, 3=daily
-  repeatability   Int // 1=unique, 3=routine
-  dataSensitivity Int // 1=highly sensitive, 3=none
-  timeCost        Int // 1=minutes, 3=hours
-  errorRisk       Int // 1=catastrophic, 3=low
-  currentTooling  Int // 1=complex stack, 3=none
+  taskVolume      Int
+  repeatability   Int
+  dataSensitivity Int
+  timeCost        Int
+  errorRisk       Int
+  currentTooling  Int
 
-  totalScore     Int            // computed: weighted sum
+  totalScore     Int
   automationMode AutomationMode
   applicability  Applicability
 
@@ -61,52 +64,61 @@ model AuditReport {
 }
 
 model Workflow {
-  id        String         @id @default(cuid())
-  auditId   String
-  audit     Audit          @relation(fields: [auditId], references: [id], onDelete: Cascade)
-  taskId    String
-  task      AuditTask      @relation(fields: [taskId], references: [id])
-  status    WorkflowStatus @default(DRAFT)
-  paymentId String?
+  id      String         @id @default(cuid())
+  auditId String
+  audit   Audit          @relation(fields: [auditId], references: [id], onDelete: Cascade)
+  taskId  String
+  task    AuditTask      @relation(fields: [taskId], references: [id])
+  status  WorkflowStatus @default(DRAFT)
 
-  trigger    String   @db.Text
-  claudeDoes String[]
-  humanDoes  String[]
-  handoffs   String[]
+  summary         String? @db.Text // one-line: what this workflow does
+  timeSavedPerRun Int     @default(0)
+  runsCount       Int     @default(0)
 
-  timeSavedPerRun Int @default(0) // minutes per run
-  runsCount       Int @default(0)
-
-  prompts Prompt[]
-  ratings Rating[]
+  steps   WorkflowStep[]
+  ratings WorkflowRating[]
 
   activatedAt DateTime?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 }
 
-model Prompt {
+model WorkflowStep {
   id         String   @id @default(cuid())
   workflowId String
   workflow   Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
-  version    Int      @default(1)
+  order      Int
+  type       StepType
+  tool       String?  // e.g. "Zendesk" — from audit tools list
   title      String
-  content    String   @db.Text
-  isActive   Boolean  @default(true)
-  createdAt  DateTime @default(now())
+  description String  @db.Text
 
-  ratings Rating[]
+  // AI steps only
+  prompt        String? @db.Text
+  promptVersion Int     @default(1)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  ratings StepRating[]
 }
 
-model Rating {
+model WorkflowRating {
   id         String   @id @default(cuid())
   workflowId String
   workflow   Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
-  promptId   String?
-  prompt     Prompt?  @relation(fields: [promptId], references: [id])
-  score      Int // 1-5
+  score      Int      // 1-5
   feedback   String?  @db.Text
   createdAt  DateTime @default(now())
+}
+
+model StepRating {
+  id       String       @id @default(cuid())
+  stepId   String
+  step     WorkflowStep @relation(fields: [stepId], references: [id], onDelete: Cascade)
+  score    Int          // 1-5
+  feedback String?      @db.Text
+  createdAt DateTime    @default(now())
 }
 
 enum AuditStatus {
@@ -130,4 +142,12 @@ enum WorkflowStatus {
   DRAFT
   TESTING
   LIVE
+}
+
+enum StepType {
+  TRIGGER
+  AI
+  HUMAN
+  INTEGRATION
+  OUTPUT
 }

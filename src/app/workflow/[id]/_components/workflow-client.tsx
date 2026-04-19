@@ -3,64 +3,104 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
 import { Textarea } from '@/components/ui/textarea'
 import { Input } from '@/components/ui/input'
-import { Separator } from '@/components/ui/separator'
 import {
-  Copy, Check, Star, ChevronDown, ChevronUp,
-  Loader2, Wand2, Play, ArrowRight, Clock
+  Zap, User, ArrowRight, ArrowRightLeft, CheckCircle2,
+  ChevronDown, ChevronUp, Copy, Check, Star, Wand2,
+  Play, Loader2, Clock, Plus,
 } from 'lucide-react'
+import { StepType } from '@/lib/types'
 
-type Prompt = { id: string; title: string; content: string; version: number }
-type Rating = { promptId: string | null; score: number; feedback: string | null }
+type WorkflowStep = {
+  id: string
+  order: number
+  type: StepType
+  tool: string | null
+  title: string
+  description: string
+  prompt: string | null
+  promptVersion: number
+}
+
+type WorkflowRating = {
+  id: string
+  score: number
+  feedback: string | null
+}
 
 type Props = {
   workflowId: string
+  summary: string | null
   initialStatus: string
-  prompts: Prompt[]
-  ratings: Rating[]
+  steps: WorkflowStep[]
+  ratings: WorkflowRating[]
   runsCount: number
   timeSavedPerRun: number
 }
 
-const STATUS_LABELS: Record<string, { label: string; next: string; action: string }> = {
-  DRAFT: { label: 'Draft', next: 'TESTING', action: 'Start testing →' },
-  TESTING: { label: 'Testing', next: 'LIVE', action: 'Mark as live →' },
-  LIVE: { label: 'Live', next: '', action: '' },
+const STATUS_FLOW: Record<string, { next: string; action: string } | null> = {
+  DRAFT: { next: 'TESTING', action: 'Start testing' },
+  TESTING: { next: 'LIVE', action: 'Mark as live' },
+  LIVE: null,
 }
 
-const statusColors: Record<string, string> = {
-  DRAFT: 'bg-gray-100 text-gray-600',
-  TESTING: 'bg-blue-100 text-blue-800',
-  LIVE: 'bg-green-100 text-green-800',
+const stepConfig: Record<StepType, { icon: React.ReactNode; label: string; color: string; border: string; bg: string }> = {
+  TRIGGER: {
+    icon: <Zap className="h-3.5 w-3.5" />,
+    label: 'Trigger',
+    color: 'text-amber-600',
+    border: 'border-amber-200',
+    bg: 'bg-amber-50',
+  },
+  AI: {
+    icon: <Zap className="h-3.5 w-3.5" />,
+    label: 'AI',
+    color: 'text-[#c4621a]',
+    border: 'border-[#c4621a]/20',
+    bg: 'bg-[#c4621a]/5',
+  },
+  HUMAN: {
+    icon: <User className="h-3.5 w-3.5" />,
+    label: 'Human',
+    color: 'text-blue-600',
+    border: 'border-blue-200',
+    bg: 'bg-blue-50',
+  },
+  INTEGRATION: {
+    icon: <ArrowRightLeft className="h-3.5 w-3.5" />,
+    label: 'Integration',
+    color: 'text-purple-600',
+    border: 'border-purple-200',
+    bg: 'bg-purple-50',
+  },
+  OUTPUT: {
+    icon: <CheckCircle2 className="h-3.5 w-3.5" />,
+    label: 'Output',
+    color: 'text-green-600',
+    border: 'border-green-200',
+    bg: 'bg-green-50',
+  },
 }
 
-function PromptCard({
-  prompt, workflowId, existingRating, onImproved,
-}: {
-  prompt: Prompt
-  workflowId: string
-  existingRating?: Rating
-  onImproved: (newPrompt: Prompt) => void
-}) {
-  const [copied, setCopied] = useState(false)
+function StepCard({ step, workflowId }: { step: WorkflowStep; workflowId: string }) {
+  const cfg = stepConfig[step.type]
   const [expanded, setExpanded] = useState(false)
-  const [rating, setRating] = useState(existingRating?.score ?? 0)
-  const [feedback, setFeedback] = useState(existingRating?.feedback ?? '')
+  const [copied, setCopied] = useState(false)
+  const [rating, setRating] = useState(0)
+  const [feedback, setFeedback] = useState('')
   const [saving, setSaving] = useState(false)
-  const [saved, setSaved] = useState(!!existingRating)
-  const [ratingError, setRatingError] = useState('')
+  const [saved, setSaved] = useState(false)
   const [improving, setImproving] = useState(false)
-  const [improveError, setImproveError] = useState('')
   const [runInput, setRunInput] = useState('')
   const [runOutput, setRunOutput] = useState('')
   const [running, setRunning] = useState(false)
-  const [runError, setRunError] = useState('')
+  const [currentPrompt, setCurrentPrompt] = useState(step.prompt)
+  const [promptVersion, setPromptVersion] = useState(step.promptVersion)
 
   const copy = async () => {
-    await navigator.clipboard.writeText(prompt.content)
+    if (!currentPrompt) return
+    await navigator.clipboard.writeText(currentPrompt)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }
@@ -68,31 +108,26 @@ function PromptCard({
   const submitRating = async (score: number) => {
     setRating(score)
     setSaving(true)
-    setRatingError('')
     try {
-      const res = await fetch('/api/workflow/rate', {
+      await fetch('/api/workflow/rate-step', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ workflowId, promptId: prompt.id, score, feedback }),
+        body: JSON.stringify({ stepId: step.id, score, feedback }),
       })
-      if (!res.ok) throw new Error(await res.text())
       setSaved(true)
-    } catch {
-      setRatingError('Failed to save rating')
     } finally {
       setSaving(false)
     }
   }
 
-  const runPrompt = async () => {
+  const runStep = async () => {
     setRunning(true)
     setRunOutput('')
-    setRunError('')
     try {
-      const res = await fetch('/api/workflow/run-prompt', {
+      const res = await fetch('/api/workflow/run-step', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ promptId: prompt.id, workflowId, input: runInput }),
+        body: JSON.stringify({ stepId: step.id, workflowId, input: runInput }),
       })
       if (!res.ok) throw new Error(await res.text())
       const reader = res.body!.getReader()
@@ -102,154 +137,170 @@ function PromptCard({
         if (done) break
         setRunOutput((prev) => prev + decoder.decode(value))
       }
-    } catch {
-      setRunError('Failed to run prompt')
     } finally {
       setRunning(false)
     }
   }
 
-  const improvePrompt = async () => {
+  const improveStep = async () => {
     setImproving(true)
-    setImproveError('')
     try {
-      const res = await fetch('/api/workflow/improve-prompt', {
+      const res = await fetch('/api/workflow/improve-step', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ promptId: prompt.id, workflowId }),
+        body: JSON.stringify({ stepId: step.id }),
       })
       if (!res.ok) throw new Error(await res.text())
-      const { prompt: newPrompt } = await res.json()
-      onImproved(newPrompt)
-    } catch {
-      setImproveError('Failed to improve prompt')
+      const { step: updated } = await res.json()
+      setCurrentPrompt(updated.prompt)
+      setPromptVersion(updated.promptVersion)
     } finally {
       setImproving(false)
     }
   }
 
-  const lines = prompt.content.split('\n')
-  const previewLines = lines.slice(0, 3).join('\n')
-  const hasMore = lines.length > 3
-
   return (
-    <Card>
-      <CardHeader className="pb-3">
-        <div className="flex items-start justify-between gap-2">
-          <div>
-            <CardTitle className="text-sm">{prompt.title}</CardTitle>
-            <span className="text-xs text-muted-foreground">v{prompt.version}</span>
+    <div className={`rounded-xl border ${cfg.border} bg-card overflow-hidden`}>
+      {/* Step header */}
+      <div className={`px-4 py-3 flex items-start justify-between gap-3 ${cfg.bg}`}>
+        <div className="flex items-start gap-3 min-w-0">
+          <div className={`mt-0.5 h-6 w-6 rounded-md flex items-center justify-center shrink-0 ${cfg.bg} border ${cfg.border} ${cfg.color}`}>
+            {cfg.icon}
           </div>
-          <div className="flex items-center gap-2 shrink-0">
-            <Button variant="ghost" size="sm" onClick={copy} className="gap-1.5">
-              {copied ? <Check className="h-3.5 w-3.5 text-green-600" /> : <Copy className="h-3.5 w-3.5" />}
-              {copied ? 'Copied' : 'Copy'}
-            </Button>
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="bg-muted rounded-lg p-3 font-mono text-xs leading-relaxed">
-          <pre className="whitespace-pre-wrap">
-            {expanded ? prompt.content : previewLines}
-            {!expanded && hasMore && '\n...'}
-          </pre>
-          {hasMore && (
-            <button
-              onClick={() => setExpanded(!expanded)}
-              className="flex items-center gap-1 mt-2 text-muted-foreground hover:text-foreground transition-colors"
-            >
-              {expanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-              {expanded ? 'Show less' : 'Show full prompt'}
-            </button>
-          )}
-        </div>
-
-        {/* Rating */}
-        <div className="space-y-2">
-          <p className="text-xs font-medium text-muted-foreground">Rate this prompt after running it</p>
-          <div className="flex items-center gap-1">
-            {[1, 2, 3, 4, 5].map((star) => (
-              <button key={star} onClick={() => submitRating(star)}>
-                <Star className={`h-5 w-5 transition-colors ${star <= rating ? 'fill-amber-400 text-amber-400' : 'text-muted-foreground/40 hover:text-amber-300'}`} />
-              </button>
-            ))}
-            {saving && <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground ml-2" />}
-            {saved && !saving && <Check className="h-3.5 w-3.5 text-green-600 ml-2" />}
-          </div>
-          {ratingError && <p className="text-xs text-destructive">{ratingError}</p>}
-          {rating > 0 && (
-            <Textarea
-              placeholder="What worked? What didn't? (optional)"
-              value={feedback}
-              onChange={(e) => setFeedback(e.target.value)}
-              className="text-sm min-h-[60px]"
-              onBlur={() => rating > 0 && submitRating(rating)}
-            />
-          )}
-        </div>
-
-        {/* Run */}
-        <div className="space-y-2">
-          <p className="text-xs font-medium text-muted-foreground">Try it</p>
-          <Textarea
-            placeholder="Paste your input here — e.g. meeting transcript, email draft, raw notes…"
-            value={runInput}
-            onChange={(e) => setRunInput(e.target.value)}
-            className="text-sm min-h-[80px]"
-          />
-          <Button
-            variant="outline"
-            size="sm"
-            className="gap-2"
-            onClick={runPrompt}
-            disabled={running || !runInput.trim()}
-          >
-            {running ? <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Running…</> : <><Play className="h-3.5 w-3.5" /> Run</>}
-          </Button>
-          {runOutput && (
-            <div className="bg-muted rounded-lg p-3 space-y-2">
-              <p className="text-xs font-medium text-muted-foreground">Output</p>
-              <pre className="whitespace-pre-wrap font-mono text-xs leading-relaxed">{runOutput}</pre>
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className={`text-xs font-semibold uppercase tracking-wide ${cfg.color}`}>{cfg.label}</span>
+              {step.tool && (
+                <span className="text-xs bg-white/70 border border-black/10 text-foreground/70 px-2 py-0.5 rounded-md">
+                  {step.tool}
+                </span>
+              )}
             </div>
-          )}
-          {runError && <p className="text-xs text-destructive">{runError}</p>}
+            <p className="font-medium text-sm mt-0.5 text-foreground">{step.title}</p>
+          </div>
         </div>
+        <span className="text-xs text-muted-foreground shrink-0 mt-1">#{step.order + 1}</span>
+      </div>
 
-        {/* Improve */}
-        {rating > 0 && (
-          <div className="space-y-1">
+      {/* Description */}
+      <div className="px-4 py-3 border-t border-border/50">
+        <p className="text-sm text-muted-foreground">{step.description}</p>
+      </div>
+
+      {/* AI step extras */}
+      {step.type === 'AI' && currentPrompt && (
+        <div className="px-4 pb-4 space-y-3 border-t border-border/50 pt-3">
+          {/* Prompt */}
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <button
+                onClick={() => setExpanded(!expanded)}
+                className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
+              >
+                {expanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+                Prompt v{promptVersion}
+              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={copy}
+                  className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  {copied ? <Check className="h-3 w-3 text-green-600" /> : <Copy className="h-3 w-3" />}
+                  {copied ? 'Copied' : 'Copy'}
+                </button>
+              </div>
+            </div>
+
+            {expanded && (
+              <div className="bg-muted rounded-lg p-3 font-mono text-xs leading-relaxed">
+                <pre className="whitespace-pre-wrap">{currentPrompt}</pre>
+              </div>
+            )}
+          </div>
+
+          {/* Try it */}
+          <div className="space-y-2">
+            <p className="text-xs font-medium text-muted-foreground">Try it</p>
+            <Textarea
+              placeholder="Paste your input here…"
+              value={runInput}
+              onChange={(e) => setRunInput(e.target.value)}
+              className="text-sm min-h-[72px] resize-none"
+            />
             <Button
               variant="outline"
               size="sm"
-              className="gap-2"
-              onClick={improvePrompt}
-              disabled={improving}
+              className="gap-1.5"
+              onClick={runStep}
+              disabled={running || !runInput.trim()}
             >
-              {improving
-                ? <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Improving…</>
-                : <><Wand2 className="h-3.5 w-3.5" /> Regenerate improved version</>
-              }
+              {running ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Play className="h-3.5 w-3.5" />}
+              {running ? 'Running…' : 'Run'}
             </Button>
-            {improveError && <p className="text-xs text-destructive">{improveError}</p>}
+            {runOutput && (
+              <div className="bg-muted rounded-lg p-3">
+                <p className="text-xs font-medium text-muted-foreground mb-1.5">Output</p>
+                <pre className="whitespace-pre-wrap font-mono text-xs leading-relaxed">{runOutput}</pre>
+              </div>
+            )}
           </div>
-        )}
-      </CardContent>
-    </Card>
+
+          {/* Rating */}
+          <div className="space-y-2 pt-1 border-t border-border/40">
+            <p className="text-xs font-medium text-muted-foreground">Rate this prompt</p>
+            <div className="flex items-center gap-1">
+              {[1, 2, 3, 4, 5].map((s) => (
+                <button key={s} onClick={() => submitRating(s)}>
+                  <Star className={`h-4 w-4 transition-colors ${s <= rating ? 'fill-amber-400 text-amber-400' : 'text-muted-foreground/30 hover:text-amber-300'}`} />
+                </button>
+              ))}
+              {saving && <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground ml-2" />}
+              {saved && !saving && <Check className="h-3.5 w-3.5 text-green-600 ml-2" />}
+            </div>
+            {rating > 0 && (
+              <Textarea
+                placeholder="What worked or didn't? (optional)"
+                value={feedback}
+                onChange={(e) => setFeedback(e.target.value)}
+                onBlur={() => rating > 0 && submitRating(rating)}
+                className="text-sm min-h-[52px] resize-none"
+              />
+            )}
+            {rating > 0 && (
+              <Button variant="outline" size="sm" className="gap-1.5" onClick={improveStep} disabled={improving}>
+                {improving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Wand2 className="h-3.5 w-3.5" />}
+                {improving ? 'Improving…' : 'Regenerate prompt'}
+              </Button>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
   )
 }
 
-function LogRunCard({ workflowId, runsCount, timeSavedPerRun }: { workflowId: string; runsCount: number; timeSavedPerRun: number }) {
+function Connector() {
+  return (
+    <div className="flex justify-center py-1">
+      <div className="flex flex-col items-center gap-0.5">
+        <div className="w-px h-3 bg-border" />
+        <ArrowRight className="h-3 w-3 text-muted-foreground/40 rotate-90" />
+        <div className="w-px h-3 bg-border" />
+      </div>
+    </div>
+  )
+}
+
+function TimeTracker({ workflowId, runsCount, timeSavedPerRun }: { workflowId: string; runsCount: number; timeSavedPerRun: number }) {
   const router = useRouter()
   const [minutes, setMinutes] = useState(timeSavedPerRun > 0 ? String(timeSavedPerRun) : '')
   const [logging, setLogging] = useState(false)
-  const [logError, setLogError] = useState('')
   const [runs, setRuns] = useState(runsCount)
-  const totalHours = Math.round((runs * (timeSavedPerRun || Number(minutes) || 0)) / 60 * 10) / 10
+  const mins = timeSavedPerRun || Number(minutes) || 0
+  const totalHours = Math.round((runs * mins) / 60 * 10) / 10
 
   const logRun = async () => {
     setLogging(true)
-    setLogError('')
     try {
       const res = await fetch('/api/workflow/log-run', {
         method: 'POST',
@@ -260,68 +311,65 @@ function LogRunCard({ workflowId, runsCount, timeSavedPerRun }: { workflowId: st
       const data = await res.json()
       setRuns(data.runsCount)
       router.refresh()
-    } catch {
-      setLogError('Failed to log run')
     } finally {
       setLogging(false)
     }
   }
 
   return (
-    <Card>
-      <CardHeader className="pb-3">
-        <CardTitle className="text-sm font-medium flex items-center gap-2">
-          <Clock className="h-4 w-4 text-muted-foreground" /> Time savings tracker
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="grid grid-cols-2 gap-4">
-          <div className="bg-muted rounded-lg p-3 text-center">
-            <p className="text-2xl font-bold">{runs}</p>
-            <p className="text-xs text-muted-foreground mt-1">Runs logged</p>
-          </div>
-          <div className="bg-muted rounded-lg p-3 text-center">
-            <p className="text-2xl font-bold">{totalHours}h</p>
-            <p className="text-xs text-muted-foreground mt-1">Total time saved</p>
-          </div>
+    <div className="rounded-xl border border-border bg-card p-4 space-y-4">
+      <div className="flex items-center gap-2">
+        <Clock className="h-4 w-4 text-muted-foreground" />
+        <p className="text-sm font-medium">Time savings</p>
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div className="bg-muted rounded-lg p-3 text-center">
+          <p className="text-2xl font-bold">{runs}</p>
+          <p className="text-xs text-muted-foreground mt-0.5">Runs logged</p>
         </div>
-
-        <div className="flex items-center gap-2">
-          <div className="relative flex-1">
-            <Input
-              type="number"
-              min={1}
-              placeholder="Minutes saved per run"
-              value={minutes}
-              onChange={(e) => setMinutes(e.target.value)}
-              className="pr-16"
-            />
-            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">min</span>
-          </div>
-          <Button onClick={logRun} disabled={logging} className="gap-2 shrink-0">
-            {logging ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Play className="h-3.5 w-3.5" />}
-            Log run
-          </Button>
+        <div className="bg-muted rounded-lg p-3 text-center">
+          <p className="text-2xl font-bold">{totalHours > 0 ? `${totalHours}h` : '—'}</p>
+          <p className="text-xs text-muted-foreground mt-0.5">Time saved</p>
         </div>
-        {logError && <p className="text-xs text-destructive">{logError}</p>}
-      </CardContent>
-    </Card>
+      </div>
+      <div className="flex items-center gap-2">
+        <div className="relative flex-1">
+          <Input
+            type="number"
+            min={1}
+            placeholder="Minutes saved per run"
+            value={minutes}
+            onChange={(e) => setMinutes(e.target.value)}
+            className="pr-12 text-sm"
+          />
+          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">min</span>
+        </div>
+        <Button onClick={logRun} disabled={logging} size="sm" className="gap-1.5 shrink-0">
+          {logging ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
+          Log run
+        </Button>
+      </div>
+    </div>
   )
 }
 
-export function WorkflowClient({ workflowId, initialStatus, prompts: initialPrompts, ratings, runsCount, timeSavedPerRun }: Props) {
+export function WorkflowClient({
+  workflowId, summary, initialStatus, steps, ratings, runsCount, timeSavedPerRun,
+}: Props) {
   const router = useRouter()
   const [status, setStatus] = useState(initialStatus)
-  const [prompts, setPrompts] = useState<Prompt[]>(initialPrompts)
   const [advancing, setAdvancing] = useState(false)
-  const [advanceError, setAdvanceError] = useState('')
 
-  const ratingByPrompt = Object.fromEntries(ratings.map((r) => [r.promptId, r]))
-  const statusInfo = STATUS_LABELS[status]
+  const statusFlow = STATUS_FLOW[status]
+
+  const statusColors: Record<string, string> = {
+    DRAFT: 'bg-gray-100 text-gray-600',
+    TESTING: 'bg-blue-100 text-blue-800',
+    LIVE: 'bg-green-100 text-green-800',
+  }
 
   const advanceStatus = async () => {
     setAdvancing(true)
-    setAdvanceError('')
     try {
       const res = await fetch('/api/workflow/status', {
         method: 'POST',
@@ -332,80 +380,49 @@ export function WorkflowClient({ workflowId, initialStatus, prompts: initialProm
       const { status: next } = await res.json()
       setStatus(next)
       router.refresh()
-    } catch {
-      setAdvanceError('Failed to update status')
     } finally {
       setAdvancing(false)
     }
-  }
-
-  const handleImproved = (newPrompt: Prompt) => {
-    setPrompts((prev) => [...prev.filter((p) => p.id !== newPrompt.id), newPrompt]
-      .sort((a, b) => a.title.localeCompare(b.title)))
   }
 
   return (
     <div className="space-y-6">
       {/* Status bar */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <h2 className="font-semibold">Prompts</h2>
-          <Badge className={`text-xs ${statusColors[status]}`}>{statusInfo.label}</Badge>
-          <span className="text-xs text-muted-foreground">{prompts.length} prompts</span>
+        <div className="flex items-center gap-2.5">
+          <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${statusColors[status]}`}>{status}</span>
+          <span className="text-xs text-muted-foreground">{steps.length} steps · {ratings.length} ratings</span>
         </div>
-        <div className="flex flex-col items-end gap-1">
-          {statusInfo.action && (
-            <Button size="sm" variant="outline" className="gap-2" onClick={advanceStatus} disabled={advancing}>
-              {advancing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ArrowRight className="h-3.5 w-3.5" />}
-              {statusInfo.action}
-            </Button>
-          )}
-          {status === 'DRAFT' && (
-            <p className="text-xs text-muted-foreground">{ratings.length}/3 ratings needed</p>
-          )}
-          {status === 'TESTING' && ratings.length > 0 && (() => {
-            const avg = ratings.reduce((s, r) => s + r.score, 0) / ratings.length
-            return <p className="text-xs text-muted-foreground">{avg.toFixed(1)}/3.5 avg needed to go live</p>
-          })()}
-          {advanceError && <p className="text-xs text-destructive">{advanceError}</p>}
+        {statusFlow && (
+          <Button size="sm" variant="outline" className="gap-1.5" onClick={advanceStatus} disabled={advancing}>
+            {advancing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ArrowRight className="h-3.5 w-3.5" />}
+            {statusFlow.action}
+          </Button>
+        )}
+      </div>
+
+      {/* Summary */}
+      {summary && (
+        <p className="text-sm text-muted-foreground italic border-l-2 border-primary/30 pl-3">{summary}</p>
+      )}
+
+      {/* Flow */}
+      <div>
+        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-4">Workflow steps</p>
+        <div>
+          {steps.map((step, i) => (
+            <div key={step.id}>
+              <StepCard step={step} workflowId={workflowId} />
+              {i < steps.length - 1 && <Connector />}
+            </div>
+          ))}
         </div>
       </div>
 
-      {status === 'DRAFT' && (
-        <p className="text-sm text-muted-foreground">
-          Copy a prompt, run it with real inputs, rate the output. Once you&apos;ve tested a few, move to Testing.
-        </p>
-      )}
-      {status === 'TESTING' && (
-        <p className="text-sm text-muted-foreground">
-          Rate prompts, use &ldquo;Regenerate&rdquo; to improve weak ones, then mark live when the team is happy.
-        </p>
-      )}
-      {status === 'LIVE' && (
-        <p className="text-sm text-muted-foreground">
-          Workflow is live. Log runs below to track time saved.
-        </p>
-      )}
-
-      <Separator />
-
-      {/* Time tracker (shown in testing + live) */}
+      {/* Time tracker */}
       {status !== 'DRAFT' && (
-        <LogRunCard workflowId={workflowId} runsCount={runsCount} timeSavedPerRun={timeSavedPerRun} />
+        <TimeTracker workflowId={workflowId} runsCount={runsCount} timeSavedPerRun={timeSavedPerRun} />
       )}
-
-      {/* Prompt cards */}
-      <div className="space-y-4">
-        {prompts.map((prompt) => (
-          <PromptCard
-            key={prompt.id}
-            prompt={prompt}
-            workflowId={workflowId}
-            existingRating={ratingByPrompt[prompt.id]}
-            onImproved={handleImproved}
-          />
-        ))}
-      </div>
     </div>
   )
 }
