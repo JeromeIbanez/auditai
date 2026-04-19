@@ -1,5 +1,3 @@
-import { auth } from '@clerk/nextjs/server'
-import { NextResponse } from 'next/server'
 import { streamText } from 'ai'
 import { getModel } from '@/lib/ai'
 import { apiError } from '@/lib/api-error'
@@ -9,9 +7,6 @@ import { AuditContextInput, TaskInput } from '@/lib/types'
 export const maxDuration = 60
 
 export async function POST(req: Request) {
-  const { userId } = await auth()
-  if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
   try {
 
   const { context, tasks }: { context: AuditContextInput; tasks: TaskInput[] } = await req.json()

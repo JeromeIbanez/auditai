@@ -27,14 +27,14 @@ export default function LandingPage() {
           <Link href="/sign-in">
             <Button variant="ghost" size="sm">Sign in</Button>
           </Link>
-          <Link href="/audit">
-            <Button size="sm">Start free audit</Button>
+          <Link href="/sign-up">
+            <Button size="sm">Get started free</Button>
           </Link>
         </div>
       </header>
 
       <section className="flex-1 flex flex-col items-center justify-center text-center px-6 py-24 bg-gradient-to-b from-background to-muted/30">
-        <Badge variant="secondary" className="mb-6">Free audit · No credit card required</Badge>
+        <Badge variant="secondary" className="mb-6">Free · No credit card required</Badge>
         <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold tracking-tight max-w-3xl leading-tight">
           From AI opportunity<br />to working workflow
         </h1>
@@ -42,13 +42,13 @@ export default function LandingPage() {
           Most companies know AI exists but don&apos;t know where to start. AuditAI maps your department, scores every task, and guides you from &ldquo;we found 5 opportunities&rdquo; to &ldquo;we have 5 working AI workflows.&rdquo;
         </p>
         <div className="mt-10 flex flex-col sm:flex-row items-center gap-4">
-          <Link href="/audit">
+          <Link href="/sign-up">
             <Button size="lg" className="gap-2">
-              Start your free audit <ArrowRight className="h-4 w-4" />
+              Get started free <ArrowRight className="h-4 w-4" />
             </Button>
           </Link>
           <Link href="/sign-in">
-            <Button size="lg" variant="outline">View my audits</Button>
+            <Button size="lg" variant="outline">Sign in</Button>
           </Link>
         </div>
       </section>
@@ -125,9 +125,9 @@ export default function LandingPage() {
         <div className="max-w-2xl mx-auto text-center">
           <h2 className="text-3xl font-bold mb-4">Run your first audit in 15 minutes</h2>
           <p className="text-primary-foreground/80 mb-8">Free. No credit card. Takes one department from blank slate to prioritized opportunity report.</p>
-          <Link href="/audit">
+          <Link href="/sign-up">
             <Button size="lg" variant="secondary" className="gap-2">
-              Start free audit <ArrowRight className="h-4 w-4" />
+              Get started free <ArrowRight className="h-4 w-4" />
             </Button>
           </Link>
         </div>

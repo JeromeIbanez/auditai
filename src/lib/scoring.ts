@@ -18,8 +18,8 @@ const WEIGHTS = {
 }
 
 export function computeScore(scores: TaskScores): number {
-  return Object.entries(scores).reduce((total, [key, value]) => {
-    return total + value * WEIGHTS[key as keyof typeof WEIGHTS]
+  return (Object.keys(WEIGHTS) as (keyof typeof WEIGHTS)[]).reduce((total, key) => {
+    return total + scores[key] * WEIGHTS[key]
   }, 0)
 }
 

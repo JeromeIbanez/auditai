@@ -54,6 +54,10 @@ function PromptCard({
   const [ratingError, setRatingError] = useState('')
   const [improving, setImproving] = useState(false)
   const [improveError, setImproveError] = useState('')
+  const [runInput, setRunInput] = useState('')
+  const [runOutput, setRunOutput] = useState('')
+  const [running, setRunning] = useState(false)
+  const [runError, setRunError] = useState('')
 
   const copy = async () => {
     await navigator.clipboard.writeText(prompt.content)
@@ -77,6 +81,31 @@ function PromptCard({
       setRatingError('Failed to save rating')
     } finally {
       setSaving(false)
+    }
+  }
+
+  const runPrompt = async () => {
+    setRunning(true)
+    setRunOutput('')
+    setRunError('')
+    try {
+      const res = await fetch('/api/workflow/run-prompt', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ promptId: prompt.id, workflowId, input: runInput }),
+      })
+      if (!res.ok) throw new Error(await res.text())
+      const reader = res.body!.getReader()
+      const decoder = new TextDecoder()
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        setRunOutput((prev) => prev + decoder.decode(value))
+      }
+    } catch {
+      setRunError('Failed to run prompt')
+    } finally {
+      setRunning(false)
     }
   }
 
@@ -158,6 +187,33 @@ function PromptCard({
               onBlur={() => rating > 0 && submitRating(rating)}
             />
           )}
+        </div>
+
+        {/* Run */}
+        <div className="space-y-2">
+          <p className="text-xs font-medium text-muted-foreground">Try it</p>
+          <Textarea
+            placeholder="Paste your input here — e.g. meeting transcript, email draft, raw notes…"
+            value={runInput}
+            onChange={(e) => setRunInput(e.target.value)}
+            className="text-sm min-h-[80px]"
+          />
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-2"
+            onClick={runPrompt}
+            disabled={running || !runInput.trim()}
+          >
+            {running ? <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Running…</> : <><Play className="h-3.5 w-3.5" /> Run</>}
+          </Button>
+          {runOutput && (
+            <div className="bg-muted rounded-lg p-3 space-y-2">
+              <p className="text-xs font-medium text-muted-foreground">Output</p>
+              <pre className="whitespace-pre-wrap font-mono text-xs leading-relaxed">{runOutput}</pre>
+            </div>
+          )}
+          {runError && <p className="text-xs text-destructive">{runError}</p>}
         </div>
 
         {/* Improve */}
@@ -304,6 +360,13 @@ export function WorkflowClient({ workflowId, initialStatus, prompts: initialProm
               {statusInfo.action}
             </Button>
           )}
+          {status === 'DRAFT' && (
+            <p className="text-xs text-muted-foreground">{ratings.length}/3 ratings needed</p>
+          )}
+          {status === 'TESTING' && ratings.length > 0 && (() => {
+            const avg = ratings.reduce((s, r) => s + r.score, 0) / ratings.length
+            return <p className="text-xs text-muted-foreground">{avg.toFixed(1)}/3.5 avg needed to go live</p>
+          })()}
           {advanceError && <p className="text-xs text-destructive">{advanceError}</p>}
         </div>
       </div>
