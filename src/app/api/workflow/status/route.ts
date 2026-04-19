@@ -16,27 +16,22 @@ export async function POST(req: Request) {
 
   const workflow = await prisma.workflow.findFirst({
     where: { id: workflowId, audit: { userId } },
+    include: { ratings: { select: { score: true } } },
   })
   if (!workflow) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
   const next = TRANSITIONS[workflow.status]
   if (!next) return NextResponse.json({ error: 'Already live' }, { status: 400 })
 
-  const ratings = await prisma.rating.findMany({
-    where: { workflowId },
-    select: { score: true },
-  })
+  const { ratings } = workflow
 
-  if (workflow.status === 'DRAFT' && ratings.length < 3) {
+  if (workflow.status === 'DRAFT' && ratings.length < 1) {
     return NextResponse.json({
-      error: `Rate at least 3 prompts before advancing (${ratings.length}/3 so far)`,
+      error: `Rate at least one step before advancing`,
     }, { status: 400 })
   }
-  if (workflow.status === 'TESTING') {
-    if (ratings.length === 0) {
-      return NextResponse.json({ error: 'No ratings yet' }, { status: 400 })
-    }
-    const avg = ratings.reduce((s, r) => s + r.score, 0) / ratings.length
+  if (workflow.status === 'TESTING' && ratings.length > 0) {
+    const avg = ratings.reduce((s: number, r: { score: number }) => s + r.score, 0) / ratings.length
     if (avg < 3.5) {
       return NextResponse.json({
         error: `Average rating must be 3.5+ to go live (currently ${avg.toFixed(1)})`,

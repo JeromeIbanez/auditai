@@ -5,52 +5,42 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Badge } from '@/components/ui/badge'
-import { X } from 'lucide-react'
+import { X, Plus } from 'lucide-react'
 import { AuditContextInput, DEPARTMENTS } from '@/lib/types'
 
 type Props = {
   initial: AuditContextInput
+  defaultTools: string[] // from user profile
   onNext: (data: AuditContextInput) => void
 }
 
-export function StepContext({ initial, onNext }: Props) {
+export function StepContext({ initial, defaultTools, onNext }: Props) {
   const [form, setForm] = useState<AuditContextInput>(initial)
   const [toolInput, setToolInput] = useState('')
 
-  const addTool = () => {
-    const t = toolInput.trim()
-    if (t && !form.tools.includes(t)) {
-      setForm((f) => ({ ...f, tools: [...f.tools, t] }))
-    }
-    setToolInput('')
+  const addTool = (tool?: string) => {
+    const t = (tool ?? toolInput).trim()
+    if (t && !form.tools.includes(t)) setForm((f) => ({ ...f, tools: [...f.tools, t] }))
+    if (!tool) setToolInput('')
   }
 
   const removeTool = (tool: string) =>
     setForm((f) => ({ ...f, tools: f.tools.filter((t) => t !== tool) }))
 
-  const valid = form.company.trim() && form.department && form.teamSize > 0
+  const valid = form.department && form.teamSize > 0
+
+  const unusedDefaults = defaultTools.filter((t) => !form.tools.includes(t))
 
   return (
     <div className="space-y-6">
       <div>
         <h2 className="text-xl font-semibold mb-1">Department context</h2>
         <p className="text-sm text-muted-foreground">
-          This becomes the foundation for every AI recommendation in your audit.
+          This shapes every AI recommendation in the audit.
         </p>
       </div>
 
       <div className="space-y-4">
-        <div className="space-y-2">
-          <Label htmlFor="company">Company name</Label>
-          <Input
-            id="company"
-            placeholder="Acme Corp"
-            value={form.company}
-            onChange={(e) => setForm((f) => ({ ...f, company: e.target.value }))}
-          />
-        </div>
-
         <div className="space-y-2">
           <Label htmlFor="department">Department</Label>
           <Select
@@ -82,29 +72,49 @@ export function StepContext({ initial, onNext }: Props) {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="tools">Tools your team uses (optional)</Label>
-          <div className="flex gap-2">
+          <Label>Tools this team uses</Label>
+
+          {/* Selected tools */}
+          {form.tools.length > 0 && (
+            <div className="flex flex-wrap gap-2 mb-1">
+              {form.tools.map((t) => (
+                <span key={t} className="flex items-center gap-1 px-2.5 py-1 bg-primary/10 border border-primary/20 text-primary rounded-lg text-sm">
+                  {t}
+                  <button onClick={() => removeTool(t)} className="hover:text-destructive transition-colors">
+                    <X className="h-3 w-3" />
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
+
+          {/* Quick-add from profile defaults */}
+          {unusedDefaults.length > 0 && (
+            <div className="flex flex-wrap gap-1.5">
+              {unusedDefaults.map((t) => (
+                <button
+                  key={t}
+                  onClick={() => addTool(t)}
+                  className="px-2.5 py-1 rounded-lg text-xs bg-muted border border-border text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-colors"
+                >
+                  + {t}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Custom input */}
+          <div className="flex gap-2 mt-1">
             <Input
-              id="tools"
-              placeholder="Salesforce, Slack, Notion..."
+              placeholder="Add another tool…"
               value={toolInput}
               onChange={(e) => setToolInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addTool())}
             />
-            <Button type="button" variant="outline" onClick={addTool}>Add</Button>
+            <Button type="button" variant="outline" size="sm" onClick={() => addTool()} disabled={!toolInput.trim()} className="shrink-0">
+              <Plus className="h-4 w-4" />
+            </Button>
           </div>
-          {form.tools.length > 0 && (
-            <div className="flex flex-wrap gap-2 mt-2">
-              {form.tools.map((t) => (
-                <Badge key={t} variant="secondary" className="gap-1">
-                  {t}
-                  <button onClick={() => removeTool(t)} className="hover:text-destructive">
-                    <X className="h-3 w-3" />
-                  </button>
-                </Badge>
-              ))}
-            </div>
-          )}
         </div>
       </div>
 

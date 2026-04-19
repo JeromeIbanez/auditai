@@ -10,17 +10,15 @@ import { ArrowLeft, Zap } from 'lucide-react'
 
 const STEPS = ['Context', 'Tasks', 'Score', 'Report']
 
-const defaultContext: AuditContextInput = {
-  company: '',
-  department: '',
-  teamSize: 0,
-  tools: [],
+type Props = {
+  companyName: string
+  defaultTools: string[]
 }
 
-export function AuditWizard() {
+export function AuditWizard({ companyName, defaultTools }: Props) {
   const [state, setState] = useState<WizardState>({
     step: 0,
-    context: defaultContext,
+    context: { department: '', teamSize: 0, tools: [] },
     tasks: [],
   })
 
@@ -69,10 +67,17 @@ export function AuditWizard() {
       {/* Content */}
       <div className="flex-1 flex items-start justify-center px-4 py-10">
         <div className="w-full max-w-2xl">
+          {/* Company label */}
+          {companyName && (
+            <p className="text-xs text-muted-foreground mb-3 text-center">
+              Auditing <span className="font-medium text-foreground">{companyName}</span>
+            </p>
+          )}
           <div className="bg-card border rounded-xl p-7 shadow-sm">
             {state.step === 0 && (
               <StepContext
                 initial={state.context}
+                defaultTools={defaultTools}
                 onNext={(context: AuditContextInput) => setState((s) => ({ ...s, step: 1, context }))}
               />
             )}

@@ -82,7 +82,7 @@ export function StepReport({ context, tasks, onBack }: Props) {
       <div>
         <h2 className="text-xl font-semibold mb-1">Your AI opportunity report</h2>
         <p className="text-sm text-muted-foreground">
-          {context.company} · {context.department} · {context.teamSize} people
+          {context.department} · {context.teamSize} people
           {context.tools.length > 0 && ` · ${context.tools.join(', ')}`}
         </p>
       </div>

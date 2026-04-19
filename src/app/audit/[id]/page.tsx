@@ -3,7 +3,7 @@ import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
 import { prisma } from '@/lib/prisma'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { Separator } from '@/components/ui/separator'
@@ -44,9 +44,10 @@ export default async function AuditDetailPage({ params }: Props) {
       tasks: { orderBy: { order: 'asc' } },
       report: true,
       workflows: {
-        include: { prompts: { where: { isActive: true } }, ratings: true },
+        include: { steps: true, ratings: true },
         orderBy: { createdAt: 'asc' },
       },
+      user: { select: { companyName: true } },
     },
   })
 
@@ -54,6 +55,7 @@ export default async function AuditDetailPage({ params }: Props) {
 
   const sortedTasks = [...audit.tasks].sort((a, b) => b.totalScore - a.totalScore)
   const activatedTaskIds = new Set(audit.workflows.map((w) => w.taskId))
+  const title = audit.user.companyName ?? audit.department
 
   return (
     <AppShell>
@@ -62,12 +64,12 @@ export default async function AuditDetailPage({ params }: Props) {
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <Link href="/dashboard" className="hover:text-foreground transition-colors">Dashboard</Link>
           <span>/</span>
-          <span className="text-foreground">{audit.company}</span>
+          <span className="text-foreground">{title}</span>
         </div>
 
         <div>
           <div className="flex items-center gap-3 mb-1.5">
-            <h1 className="text-xl font-semibold tracking-tight">{audit.company}</h1>
+            <h1 className="text-xl font-semibold tracking-tight">{title}</h1>
             <Badge variant="secondary">{audit.department}</Badge>
           </div>
           <p className="text-muted-foreground text-sm">
@@ -79,10 +81,8 @@ export default async function AuditDetailPage({ params }: Props) {
         {/* AI Report */}
         {audit.report && (
           <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wide">AI Analysis</CardTitle>
-            </CardHeader>
-            <CardContent>
+            <CardContent className="pt-5">
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">AI Analysis</p>
               <div className="prose prose-sm max-w-none text-foreground whitespace-pre-wrap leading-relaxed text-sm">
                 {audit.report.narrative}
               </div>
@@ -146,7 +146,7 @@ export default async function AuditDetailPage({ params }: Props) {
                           <Clock className="h-4 w-4 text-muted-foreground" />
                         )}
                         <span className="text-sm text-muted-foreground">
-                          {workflow.prompts.length} prompts · {workflow.ratings.length} ratings
+                          {workflow.steps.length} steps · {workflow.ratings.length} ratings
                         </span>
                       </div>
                       <div className="flex items-center gap-2">

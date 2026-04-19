@@ -33,7 +33,6 @@ Never say "use Claude" or "use AI" — say what the workflow accomplishes and ho
 Keep the tone direct, specific, and free of generic AI enthusiasm.`,
     prompt: `Complete an AI opportunity audit report for the following:
 
-COMPANY: ${context.company}
 DEPARTMENT: ${context.department}
 TEAM SIZE: ${context.teamSize} people
 TOOLS IN USE: ${context.tools.length > 0 ? context.tools.join(', ') : 'Not specified'}
