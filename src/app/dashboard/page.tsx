@@ -95,7 +95,8 @@ export default async function DashboardPage() {
     })
     if (!user.onboarded) redirect('/onboarding')
     data = await getDashboardData(userId)
-  } catch {
+  } catch (e) {
+    console.error('[dashboard] DB error:', e)
     dbError = true
   }
 
