@@ -15,17 +15,19 @@ const ScoreSchema = z.object({
 export async function POST(req: Request) {
   const { task, context, messages } = await req.json()
 
-  const systemPrompt = `Based on a conversation about the task "${task.name}" for a ${context.department} team, extract 6 dimension scores.
+  const systemPrompt = `Based on a conversation about the task "${task.name}" for a ${context.department} team, extract 6 dimension scores (1–3).
 
-Scale for each (1 = worst fit for AI, 3 = best fit for AI):
-- taskVolume: 1=rare/monthly, 2=weekly, 3=daily
-- repeatability: 1=highly variable, 2=somewhat consistent, 3=routine/structured
-- dataSensitivity: 1=highly sensitive (PII/legal/financial), 2=moderately sensitive, 3=not sensitive
-- timeCost: 1=minutes, 2=30min–1hr, 3=hours
-- errorRisk: 1=catastrophic if wrong, 2=significant but recoverable, 3=low/easily caught
-- currentTooling: 1=complex integration required, 2=some integration needed, 3=none/standalone
+Higher score = better fit for AI automation. Be accurate — do not default to 2 just because you're uncertain. Use the full range.
 
-Use best judgment from the conversation. Default to 2 if unclear.`
+Scoring guide:
+- taskVolume: How often is this done? 1=rarely (monthly or less), 2=weekly, 3=multiple times per week or daily
+- repeatability: How consistent is the process each time? 1=highly variable/unique each time, 2=somewhat consistent, 3=routine and structured with a clear pattern
+- dataSensitivity: How sensitive is the data involved? 1=highly sensitive (medical/legal/financial/PII), 2=moderately sensitive (internal business data), 3=non-sensitive (public info, general content)
+- timeCost: How long does it take a human? 1=a few minutes, 2=30 minutes to an hour, 3=multiple hours
+- errorRisk: What happens if AI makes a mistake? 1=catastrophic and hard to catch, 2=significant but recoverable with review, 3=low risk — mistakes are obvious and easily corrected
+- currentTooling: How complex is the current setup? 1=deeply embedded in complex systems, 2=uses some tools but manageable, 3=mostly manual today, no integration needed
+
+For standard business tasks like writing, summarising, drafting, classifying, or generating structured content — these typically score 2–3 on most dimensions unless the conversation reveals a specific reason otherwise.`
 
   try {
     const { object } = await generateObject({
