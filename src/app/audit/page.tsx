@@ -11,8 +11,10 @@ export default async function AuditPage() {
 
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    select: { companyName: true, tools: true },
+    select: { companyName: true, tools: true, onboarded: true },
   })
+
+  if (!user?.onboarded) redirect('/onboarding')
 
   return <AuditWizard companyName={user?.companyName ?? ''} defaultTools={user?.tools ?? []} />
 }

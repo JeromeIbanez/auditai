@@ -88,11 +88,12 @@ export default async function DashboardPage() {
   let dbError = false
 
   try {
-    await prisma.user.upsert({
+    const user = await prisma.user.upsert({
       where: { id: userId },
       update: {},
       create: { id: userId, email: `user-${userId}@placeholder.com` },
     })
+    if (!user.onboarded) redirect('/onboarding')
     data = await getDashboardData(userId)
   } catch {
     dbError = true
