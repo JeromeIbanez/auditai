@@ -7,9 +7,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { Separator } from '@/components/ui/separator'
-import { ArrowLeft, AlertTriangle, CheckCircle2, Clock } from 'lucide-react'
+import { AlertTriangle, CheckCircle2, Clock } from 'lucide-react'
 import { computeScore, getApplicability, getAutomationMode, MAX_SCORE } from '@/lib/scoring'
 import { ActivateButton } from './_components/activate-button'
+import { AppShell } from '@/components/app-shell'
 
 type Props = { params: Promise<{ id: string }> }
 
@@ -55,20 +56,18 @@ export default async function AuditDetailPage({ params }: Props) {
   const activatedTaskIds = new Set(audit.workflows.map((w) => w.taskId))
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b px-6 py-4 flex items-center justify-between">
-        <Link href="/dashboard" className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
-          <ArrowLeft className="h-4 w-4" /> Dashboard
-        </Link>
-        <span className="font-semibold tracking-tight">AuditAI</span>
-        <div className="w-24" />
-      </header>
+    <AppShell>
+      <main className="max-w-3xl mx-auto px-8 py-10 space-y-8">
+        {/* Breadcrumb */}
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Link href="/dashboard" className="hover:text-foreground transition-colors">Dashboard</Link>
+          <span>/</span>
+          <span className="text-foreground">{audit.company}</span>
+        </div>
 
-      <main className="max-w-3xl mx-auto px-6 py-10 space-y-8">
-        {/* Header */}
         <div>
-          <div className="flex items-center gap-3 mb-1">
-            <h1 className="text-2xl font-bold">{audit.company}</h1>
+          <div className="flex items-center gap-3 mb-1.5">
+            <h1 className="text-xl font-semibold tracking-tight">{audit.company}</h1>
             <Badge variant="secondary">{audit.department}</Badge>
           </div>
           <p className="text-muted-foreground text-sm">
@@ -168,6 +167,6 @@ export default async function AuditDetailPage({ params }: Props) {
           })}
         </div>
       </main>
-    </div>
+    </AppShell>
   )
 }
