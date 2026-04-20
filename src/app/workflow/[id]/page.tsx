@@ -50,8 +50,8 @@ export default async function WorkflowPage({ params }: Props) {
         </div>
 
         <div className="flex items-start justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-3 mb-1.5">
+          <div className="space-y-1">
+            <div className="flex items-center gap-3">
               <h1 className="text-xl font-semibold tracking-tight">{workflow.task.name}</h1>
               <Badge className={`text-xs ${workflowStatusColors[workflow.status]}`}>{workflow.status}</Badge>
             </div>

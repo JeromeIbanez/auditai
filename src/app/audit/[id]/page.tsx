@@ -61,6 +61,7 @@ export default async function AuditDetailPage({ params }: Props) {
   return (
     <AppShell>
       <main className="max-w-3xl mx-auto px-8 py-10 space-y-8">
+
         {/* Breadcrumb */}
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <Link href="/dashboard" className="hover:text-foreground transition-colors">Dashboard</Link>
@@ -68,33 +69,40 @@ export default async function AuditDetailPage({ params }: Props) {
           <span className="text-foreground">{title}</span>
         </div>
 
+        {/* Header */}
         <div className="flex items-start justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-3 mb-1.5">
+          <div className="space-y-2">
+            <div className="flex items-center gap-3">
               <h1 className="text-xl font-semibold tracking-tight">{title}</h1>
               <Badge variant="secondary">{audit.department}</Badge>
             </div>
-            <p className="text-muted-foreground text-sm">
-              {audit.teamSize} people · {audit.tasks.length} tasks audited ·{' '}
-              {audit.tools.length > 0 ? audit.tools.join(', ') : 'No tools specified'}
+            <p className="text-sm text-muted-foreground">
+              {audit.teamSize} people · {audit.tasks.length} tasks audited
             </p>
+            {audit.tools.length > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                {audit.tools.map((t) => (
+                  <span key={t} className="text-xs bg-muted px-2 py-0.5 rounded-md border">{t}</span>
+                ))}
+              </div>
+            )}
           </div>
           <DeleteButton endpoint={`/api/audit/${audit.id}`} redirectTo="/dashboard" label="Delete audit" />
         </div>
 
+        <Separator />
+
         {/* AI Report */}
         {audit.report && (
-          <Card>
+          <Card className="border-l-4 border-l-[#c4621a]/40">
             <CardContent className="pt-5">
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">AI Analysis</p>
-              <div className="prose prose-sm max-w-none text-foreground whitespace-pre-wrap leading-relaxed text-sm">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">AI Analysis</p>
+              <p className="text-sm text-foreground/80 leading-relaxed whitespace-pre-wrap">
                 {audit.report.narrative}
-              </div>
+              </p>
             </CardContent>
           </Card>
         )}
-
-        <Separator />
 
         {/* Opportunities */}
         <div className="space-y-3">
@@ -113,37 +121,52 @@ export default async function AuditDetailPage({ params }: Props) {
             const score = computeScore(scores)
             const pct = (score / MAX_SCORE) * 100
             const workflow = audit.workflows.find((w) => w.taskId === task.id)
+            const isHigh = applicability === 'HIGH'
 
             return (
-              <Card key={task.id} className={activatedTaskIds.has(task.id) ? 'border-primary/30' : ''}>
+              <Card
+                key={task.id}
+                className={`${activatedTaskIds.has(task.id) ? 'border-primary/30' : ''} ${isHigh ? 'bg-green-50/40' : ''}`}
+              >
                 <CardContent className="py-4 px-5 space-y-3">
+                  {/* Title row */}
                   <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <p className="font-medium truncate">{task.name}</p>
-                      {task.errorRisk === 1 && (
-                        <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0" />
-                      )}
-                    </div>
-                    <div className="flex items-center gap-1.5 shrink-0">
-                      <Badge className={`text-xs ${applicabilityColors[applicability]}`}>{applicability}</Badge>
-                      <Badge className={`text-xs ${modeColors[mode]}`}>{mode}</Badge>
-                      <DeleteButton endpoint={`/api/task/${task.id}`} label="Delete" />
-                    </div>
+                    <p className="font-medium text-sm">{task.name}</p>
+                    <DeleteButton endpoint={`/api/task/${task.id}`} label="Delete" />
                   </div>
 
+                  {/* Score bar */}
                   <div className="space-y-1">
-                    <div className="flex justify-between text-xs text-muted-foreground">
-                      <span>Priority score</span>
+                    <div className="flex items-center justify-between text-xs text-muted-foreground">
+                      <span className="flex items-center gap-1.5">
+                        Priority score
+                        {task.errorRisk === 1 && (
+                          <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />
+                        )}
+                      </span>
                       <span>{score} / {MAX_SCORE}</span>
                     </div>
                     <Progress
                       value={pct}
-                      className={`h-1.5 ${applicability === 'HIGH' ? '[&>div]:bg-green-500' : applicability === 'MEDIUM' ? '[&>div]:bg-yellow-500' : '[&>div]:bg-gray-300'}`}
+                      className={`h-2 ${
+                        applicability === 'HIGH'
+                          ? '[&>div]:bg-green-500'
+                          : applicability === 'MEDIUM'
+                          ? '[&>div]:bg-yellow-500'
+                          : '[&>div]:bg-gray-300'
+                      }`}
                     />
                   </div>
 
+                  {/* Badges */}
+                  <div className="flex items-center gap-2">
+                    <Badge className={`text-xs ${applicabilityColors[applicability]}`}>{applicability}</Badge>
+                    <Badge className={`text-xs ${modeColors[mode]}`}>{mode}</Badge>
+                  </div>
+
+                  {/* Workflow status or activate */}
                   {workflow ? (
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between pt-1 border-t border-border/40">
                       <div className="flex items-center gap-2">
                         {workflow.status === 'LIVE' ? (
                           <CheckCircle2 className="h-4 w-4 text-green-600" />
@@ -164,7 +187,9 @@ export default async function AuditDetailPage({ params }: Props) {
                       </div>
                     </div>
                   ) : applicability !== 'LOW' ? (
-                    <ActivateButton auditId={audit.id} taskId={task.id} />
+                    <div className="pt-1 border-t border-border/40">
+                      <ActivateButton auditId={audit.id} taskId={task.id} />
+                    </div>
                   ) : null}
                 </CardContent>
               </Card>
