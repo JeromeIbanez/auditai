@@ -40,6 +40,7 @@ export async function POST(req: Request) {
               totalScore: computeScore(scores),
               automationMode: getAutomationMode(scores),
               applicability: getApplicability(scores),
+              chatContext: t.chatContext ?? null,
             }
           }),
         },

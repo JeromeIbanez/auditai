@@ -43,6 +43,7 @@ export type TaskInput = {
   timeCost: number
   errorRisk: number
   currentTooling: number
+  chatContext?: string // JSON-encoded scoring conversation messages
 }
 
 export type WizardState = {

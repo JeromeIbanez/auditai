@@ -60,6 +60,16 @@ export async function POST(req: Request) {
         ? 'AI handles the full process end-to-end. Minimize human steps — only include one at the end for final review or send.'
         : 'AI drafts and assists. Include a HUMAN step for review before any output is sent or acted on. The human is in the loop at key decision points.'
 
+    // Parse the scoring conversation for richer context
+    type ChatMessage = { role: string; content: string }
+    let chatMessages: ChatMessage[] = []
+    if (task.chatContext) {
+      try { chatMessages = JSON.parse(task.chatContext) } catch { /* ignore */ }
+    }
+    const chatSummary = chatMessages.length > 0
+      ? `\n\nScoring conversation (use these specifics to make the workflow concrete):\n${chatMessages.map((m) => `${m.role === 'user' ? 'User' : 'Assistant'}: ${m.content}`).join('\n')}`
+      : ''
+
     const { object } = await generateObject({
       model: getModel(),
       schema: workflowSchema,
@@ -75,14 +85,15 @@ Design rules:
 - INTEGRATION: steps involving a tool action (e.g. "Route ticket in Zendesk", "Update record in HubSpot"). Reference the specific tool from the team's stack.
 - OUTPUT: final step — what gets produced or sent.
 - Use the team's actual tools in step titles and descriptions wherever possible.
-- Prompts must be practical and copy-paste ready — not abstract descriptions.`,
+- Prompts must be practical and copy-paste ready — not abstract descriptions.
+- If a scoring conversation is provided, use the specific details mentioned (volume, time, edge cases, tools) to make every step concrete and tailored. Don't be generic.`,
       prompt: `Design a complete workflow for: "${task.name}"
 
 Automation mode: ${task.automationMode} (score: ${score}/42)
 ${modeInstructions}
 
 The workflow should directly reference the team's tools (${toolList}) where applicable.
-Each AI step must have a full, specific prompt ready to use — not a placeholder description.`,
+Each AI step must have a full, specific prompt ready to use — not a placeholder description.${chatSummary}`,
     })
 
     const workflow = await prisma.workflow.create({

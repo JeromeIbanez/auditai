@@ -83,6 +83,22 @@ const stepConfig: Record<StepType, { icon: React.ReactNode; label: string; color
   },
 }
 
+const stepHints: Record<StepType, (tool: string | null) => string> = {
+  TRIGGER:     (tool) => tool ? `When this event fires in ${tool}, the workflow begins.` : 'Start this manually, or wire it to a trigger in Zapier / Make.',
+  AI:          ()     => 'Copy the prompt below, fill in the placeholders, and run it in Claude or your AI tool.',
+  HUMAN:       ()     => 'A person on your team completes this step before the workflow continues.',
+  INTEGRATION: (tool) => tool ? `Perform this action in ${tool}. You can automate it via Zapier or the ${tool} API.` : 'Perform this action in your tool. Can be automated via Zapier or Make.',
+  OUTPUT:      ()     => 'This is the final deliverable — review it and send or store as needed.',
+}
+
+function StepHint({ type, tool }: { type: StepType; tool: string | null }) {
+  if (type === 'AI') return null // AI steps have their own detailed UI below
+  const hint = stepHints[type](tool)
+  return (
+    <p className="text-xs text-muted-foreground/70 italic border-t border-border/30 pt-2 mt-1">{hint}</p>
+  )
+}
+
 function StepCard({ step, workflowId }: { step: WorkflowStep; workflowId: string }) {
   const cfg = stepConfig[step.type]
   const [expanded, setExpanded] = useState(false)
@@ -183,8 +199,9 @@ function StepCard({ step, workflowId }: { step: WorkflowStep; workflowId: string
       </div>
 
       {/* Description */}
-      <div className="px-4 py-3 border-t border-border/50">
+      <div className="px-4 py-3 border-t border-border/50 space-y-2">
         <p className="text-sm text-muted-foreground">{step.description}</p>
+        <StepHint type={step.type} tool={step.tool} />
       </div>
 
       {/* AI step extras */}
@@ -405,6 +422,16 @@ export function WorkflowClient({
       {summary && (
         <p className="text-sm text-muted-foreground italic border-l-2 border-primary/30 pl-3">{summary}</p>
       )}
+
+      {/* How to use */}
+      <div className="rounded-lg border border-border bg-muted/30 px-4 py-3 space-y-1.5">
+        <p className="text-xs font-semibold text-foreground/70 uppercase tracking-wide">How to use this</p>
+        <ul className="space-y-1 text-xs text-muted-foreground">
+          <li><span className="font-medium text-foreground/80">Manually</span> — follow the steps as a checklist. Run AI prompts yourself, complete human steps, perform integrations.</li>
+          <li><span className="font-medium text-foreground/80">Semi-automated</span> — use the AI prompts in Claude or ChatGPT, trigger integrations by hand.</li>
+          <li><span className="font-medium text-foreground/80">Fully automated</span> — use the steps as a blueprint in Zapier, Make, or n8n to connect your tools end-to-end.</li>
+        </ul>
+      </div>
 
       {/* Flow */}
       <div>
