@@ -32,17 +32,18 @@ type TaskChatProps = {
   task: TaskInput
   context: AuditContextInput
   isScored: boolean
-  onScored: (task: TaskInput) => void
+  savedJustifications: Justifications | null
+  onScored: (task: TaskInput, justifications: Justifications) => void
 }
 
-function TaskChat({ task, context, isScored, onScored }: TaskChatProps) {
+function TaskChat({ task, context, isScored, savedJustifications, onScored }: TaskChatProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [input, setInput] = useState('')
   const [streaming, setStreaming] = useState(false)
   const [extracting, setExtracting] = useState(false)
   const [exchangeCount, setExchangeCount] = useState(0)
   const [error, setError] = useState('')
-  const [justifications, setJustifications] = useState<Justifications | null>(null)
+  const [justifications, setJustifications] = useState<Justifications | null>(savedJustifications)
   const bottomRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -114,7 +115,7 @@ function TaskChat({ task, context, isScored, onScored }: TaskChatProps) {
       if (!res.ok) throw new Error(await res.text())
       const { justifications: j, ...scores } = await res.json()
       setJustifications(j)
-      onScored({ ...task, ...scores, chatContext: JSON.stringify(messages) })
+      onScored({ ...task, ...scores, chatContext: JSON.stringify(messages) }, j)
     } catch {
       setError('Failed to extract scores. Try again.')
     } finally {
@@ -235,11 +236,13 @@ type Props = {
 export function StepScoreChat({ tasks, context, onNext, onBack }: Props) {
   const [scoredTasks, setScoredTasks] = useState<TaskInput[]>(tasks)
   const [activeIdx, setActiveIdx] = useState(0)
+  const [justificationsMap, setJustificationsMap] = useState<Record<string, Justifications>>({})
 
-  const handleScored = (scoredTask: TaskInput) => {
+  const handleScored = (scoredTask: TaskInput, justifications: Justifications) => {
     const updated = scoredTasks.map((t) => (t.id === scoredTask.id ? scoredTask : t))
     setScoredTasks(updated)
-    if (activeIdx < tasks.length - 1) setActiveIdx((i) => i + 1)
+    setJustificationsMap((prev) => ({ ...prev, [scoredTask.id]: justifications }))
+    // No auto-advance — let the user see the score breakdown first, then pick the next tab
   }
 
   const scoredIds = new Set(
@@ -283,6 +286,7 @@ export function StepScoreChat({ tasks, context, onNext, onBack }: Props) {
         task={tasks[activeIdx]}
         context={context}
         isScored={scoredIds.has(tasks[activeIdx].id)}
+        savedJustifications={justificationsMap[tasks[activeIdx].id] ?? null}
         onScored={handleScored}
       />
 
