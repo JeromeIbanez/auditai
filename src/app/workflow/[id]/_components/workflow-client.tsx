@@ -461,7 +461,7 @@ export function WorkflowClient({
 
       {/* Flow */}
       <div>
-        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-4">Workflow steps</p>
+        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-4 border-l-2 border-[#c4621a] pl-2.5">Workflow steps</p>
         <div>
           {steps.map((step, i) => (
             <div key={step.id}>

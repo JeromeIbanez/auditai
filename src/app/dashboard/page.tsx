@@ -17,9 +17,9 @@ export const metadata = { title: 'Dashboard — AuditAI' }
 const statusDot: Record<string, string> = {
   LIVE: 'bg-green-500',
   TESTING: 'bg-blue-500',
-  DRAFT: 'bg-gray-300',
+  DRAFT: 'bg-gray-400',
 }
-const workflowStatusBorder: Record<string, string> = {
+const workflowLeftBorder: Record<string, string> = {
   DRAFT: '',
   TESTING: '',
   LIVE: 'border-l-2 border-l-green-500',
@@ -37,10 +37,7 @@ async function getDashboardData(userId: string) {
       tasks: {
         include: {
           workflows: {
-            include: {
-              steps: true,
-              ratings: true,
-            },
+            include: { steps: true, ratings: true },
           },
         },
       },
@@ -105,12 +102,12 @@ export default async function DashboardPage() {
 
   return (
     <AppShell>
-      <main className="max-w-3xl mx-auto px-8 py-10 space-y-8">
+      <main className="max-w-3xl mx-auto px-8 py-10 space-y-10">
 
         {/* Page header */}
-        <div className="flex items-center justify-between">
+        <div className="flex items-start justify-between">
           <div>
-            <h1 className="text-xl font-semibold tracking-tight">
+            <h1 className="text-2xl font-bold tracking-tight text-[#1c1814]">
               {data?.companyName ?? 'Dashboard'}
             </h1>
             <p className="text-sm text-muted-foreground mt-0.5">Your AI workflow overview</p>
@@ -138,16 +135,16 @@ export default async function DashboardPage() {
         {data && (
           <div className="grid grid-cols-3 divide-x divide-border rounded-xl border bg-card shadow-sm">
             <div className="px-6 py-5">
-              <p className="text-xs text-muted-foreground mb-1">Audits</p>
-              <p className="text-3xl font-bold tracking-tight">{data.audits.length}</p>
+              <p className="text-xs text-muted-foreground mb-1.5">Audits</p>
+              <p className="text-3xl font-bold tracking-tight text-[#1c1814]">{data.audits.length}</p>
             </div>
             <div className="px-6 py-5">
-              <p className="text-xs text-muted-foreground mb-1">Workflows</p>
-              <p className="text-3xl font-bold tracking-tight">{data.workflows.length}</p>
+              <p className="text-xs text-muted-foreground mb-1.5">Workflows</p>
+              <p className="text-3xl font-bold tracking-tight text-[#1c1814]">{data.workflows.length}</p>
             </div>
             <div className="px-6 py-5">
-              <p className="text-xs text-muted-foreground mb-1">Hours saved</p>
-              <p className="text-3xl font-bold tracking-tight">
+              <p className="text-xs text-muted-foreground mb-1.5">Hours saved</p>
+              <p className={`text-3xl font-bold tracking-tight ${data.totalHoursSaved > 0 ? 'text-[#c4621a]' : 'text-[#1c1814]'}`}>
                 {data.totalHoursSaved > 0 ? `${data.totalHoursSaved}h` : '—'}
               </p>
             </div>
@@ -156,51 +153,51 @@ export default async function DashboardPage() {
 
         {/* Empty state */}
         {isEmpty && !dbError && (
-          <Card className="border-dashed">
-            <CardContent className="py-20 flex flex-col items-center gap-4 text-center">
-              <Zap className="h-12 w-12 text-muted-foreground/20" />
-              <div>
-                <p className="font-semibold text-lg">Run your first audit</p>
-                <p className="text-sm text-muted-foreground mt-1 max-w-sm">
-                  Find AI opportunities for your team. Takes about 15 minutes.
-                </p>
-              </div>
-              <Link href="/audit">
-                <Button className="gap-2 mt-2">
-                  Start your first audit <ArrowRight className="h-4 w-4" />
-                </Button>
-              </Link>
-            </CardContent>
-          </Card>
+          <div className="rounded-xl border-2 border-dashed border-border bg-card/50 py-20 flex flex-col items-center gap-4 text-center">
+            <div className="h-12 w-12 rounded-xl bg-[#c4621a]/10 flex items-center justify-center">
+              <Zap className="h-6 w-6 text-[#c4621a]" />
+            </div>
+            <div>
+              <p className="font-semibold text-lg text-[#1c1814]">Run your first audit</p>
+              <p className="text-sm text-muted-foreground mt-1 max-w-sm">
+                Find AI opportunities for your team. Takes about 15 minutes.
+              </p>
+            </div>
+            <Link href="/audit">
+              <Button className="gap-2 mt-2">
+                Start your first audit <ArrowRight className="h-4 w-4" />
+              </Button>
+            </Link>
+          </div>
         )}
 
         {/* Workflows */}
         {data && data.workflows.length > 0 && (
           <section className="space-y-3">
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Workflows</p>
-            <div className="space-y-1.5">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide border-l-2 border-[#c4621a] pl-2.5">
+              Workflows
+            </p>
+            <div className="rounded-xl border bg-card shadow-sm overflow-hidden divide-y divide-border">
               {data.workflows.map((w) => (
-                <Card key={w.id} className={`transition-shadow hover:shadow-sm ${workflowStatusBorder[w.status]}`}>
-                  <CardContent className="py-3 px-5 flex items-center justify-between gap-4">
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
-                        <span className={`h-2 w-2 rounded-full shrink-0 ${statusDot[w.status]}`} />
-                        <p className="font-medium text-sm truncate">{w.taskName}</p>
-                      </div>
-                      <p className="text-xs text-muted-foreground mt-0.5 pl-4">
-                        {w.department} · {w.steps.length} steps · {w.runsCount} runs
-                      </p>
+                <div key={w.id} className={`flex items-center justify-between gap-4 px-5 py-3.5 hover:bg-[#c4621a]/[0.03] transition-colors ${workflowLeftBorder[w.status]}`}>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className={`h-2 w-2 rounded-full shrink-0 ${statusDot[w.status]}`} />
+                      <p className="font-medium text-sm truncate">{w.taskName}</p>
                     </div>
-                    <div className="flex items-center gap-1 shrink-0">
-                      <Link href={`/workflow/${w.id}`}>
-                        <Button size="icon" variant="ghost" className="h-8 w-8">
-                          <ArrowUpRight className="h-4 w-4" />
-                        </Button>
-                      </Link>
-                      <DeleteButton endpoint={`/api/workflow/${w.id}`} label="Delete" />
-                    </div>
-                  </CardContent>
-                </Card>
+                    <p className="text-xs text-muted-foreground mt-0.5 pl-4">
+                      {w.department} · {w.steps.length} steps · {w.runsCount} runs
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <Link href={`/workflow/${w.id}`}>
+                      <Button size="icon" variant="ghost" className="h-8 w-8 hover:text-[#c4621a]">
+                        <ArrowUpRight className="h-4 w-4" />
+                      </Button>
+                    </Link>
+                    <DeleteButton endpoint={`/api/workflow/${w.id}`} label="Delete" />
+                  </div>
+                </div>
               ))}
             </div>
           </section>
@@ -209,29 +206,29 @@ export default async function DashboardPage() {
         {/* Open opportunities */}
         {data && data.openOpportunities.length > 0 && (
           <section className="space-y-3">
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Open opportunities</p>
-            <div className="space-y-1.5">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide border-l-2 border-[#c4621a] pl-2.5">
+              Open opportunities
+            </p>
+            <div className="rounded-xl border bg-card shadow-sm overflow-hidden divide-y divide-border">
               {data.openOpportunities.map((t) => (
-                <Card key={t.id}>
-                  <CardContent className="py-3 px-5 flex items-center justify-between gap-4">
-                    <div className="min-w-0 flex-1 space-y-2">
-                      <div className="flex items-center gap-2">
-                        <p className="font-medium text-sm truncate">{t.name}</p>
-                        <Badge className={`text-xs shrink-0 ${applicabilityColors[t.applicability]}`}>
-                          {t.applicability}
-                        </Badge>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Progress value={(t.totalScore / 42) * 100} className="h-2 flex-1" />
-                        <span className="text-xs text-muted-foreground shrink-0">{t.totalScore}/42</span>
-                      </div>
+                <div key={t.id} className="flex items-center justify-between gap-4 px-5 py-3.5 hover:bg-[#c4621a]/[0.03] transition-colors">
+                  <div className="min-w-0 flex-1 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <p className="font-medium text-sm truncate">{t.name}</p>
+                      <Badge className={`text-xs shrink-0 ${applicabilityColors[t.applicability]}`}>
+                        {t.applicability}
+                      </Badge>
                     </div>
-                    <div className="flex items-center gap-1.5 shrink-0 ml-4">
-                      <ActivateButton auditId={t.auditId} taskId={t.id} />
-                      <DeleteButton endpoint={`/api/task/${t.id}`} label="Delete" />
+                    <div className="flex items-center gap-2">
+                      <Progress value={(t.totalScore / 42) * 100} className="h-1.5 flex-1" />
+                      <span className="text-xs text-muted-foreground shrink-0 tabular-nums">{t.totalScore}/42</span>
                     </div>
-                  </CardContent>
-                </Card>
+                  </div>
+                  <div className="flex items-center gap-1.5 shrink-0 ml-4">
+                    <ActivateButton auditId={t.auditId} taskId={t.id} />
+                    <DeleteButton endpoint={`/api/task/${t.id}`} label="Delete" />
+                  </div>
+                </div>
               ))}
             </div>
           </section>
@@ -241,18 +238,20 @@ export default async function DashboardPage() {
         {data && data.audits.length > 0 && (
           <section className="space-y-3">
             <Separator />
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide pt-1">Audits</p>
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide pt-1 border-l-2 border-border pl-2.5">
+              Audits
+            </p>
             <div className="space-y-0.5">
               {data.audits.map((a) => {
                 const workflowCount = a.tasks.reduce((n, t) => n + t.workflows.length, 0)
                 return (
                   <Link key={a.id} href={`/audit/${a.id}`}>
-                    <div className="flex items-center justify-between gap-4 py-2.5 px-3 rounded-lg hover:bg-muted/50 transition-colors group">
-                      <span className="font-medium text-sm truncate">{a.department}</span>
-                      <div className="flex items-center gap-4 shrink-0 text-xs text-muted-foreground">
+                    <div className="flex items-center justify-between gap-4 py-2.5 px-3 rounded-lg hover:bg-[#c4621a]/[0.04] transition-colors group">
+                      <span className="font-medium text-sm">{a.department}</span>
+                      <div className="flex items-center gap-4 text-xs text-muted-foreground">
                         <span>{a.tasks.length} tasks · {workflowCount} workflows</span>
                         <span>{new Date(a.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</span>
-                        <ArrowUpRight className="h-3.5 w-3.5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                        <ArrowUpRight className="h-3.5 w-3.5 opacity-0 group-hover:opacity-60 transition-opacity" />
                       </div>
                     </div>
                   </Link>

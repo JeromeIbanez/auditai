@@ -73,7 +73,7 @@ export default async function AuditDetailPage({ params }: Props) {
         <div className="flex items-start justify-between gap-4">
           <div className="space-y-2">
             <div className="flex items-center gap-3">
-              <h1 className="text-xl font-semibold tracking-tight">{title}</h1>
+              <h1 className="text-2xl font-bold tracking-tight text-[#1c1814]">{title}</h1>
               <Badge variant="secondary">{audit.department}</Badge>
             </div>
             <p className="text-sm text-muted-foreground">
@@ -82,7 +82,7 @@ export default async function AuditDetailPage({ params }: Props) {
             {audit.tools.length > 0 && (
               <div className="flex flex-wrap gap-1.5">
                 {audit.tools.map((t) => (
-                  <span key={t} className="text-xs bg-muted px-2 py-0.5 rounded-md border">{t}</span>
+                  <span key={t} className="text-xs bg-card px-2 py-0.5 rounded-md border">{t}</span>
                 ))}
               </div>
             )}
@@ -106,7 +106,7 @@ export default async function AuditDetailPage({ params }: Props) {
 
         {/* Opportunities */}
         <div className="space-y-3">
-          <h2 className="font-semibold">Opportunities</h2>
+          <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide border-l-2 border-[#c4621a] pl-2.5">Opportunities</h2>
           {sortedTasks.map((task) => {
             const scores = {
               taskVolume: task.taskVolume,
