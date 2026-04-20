@@ -39,47 +39,54 @@ type Props = {
   timeSavedPerRun: number
 }
 
+const STATUS_STEPS = ['DRAFT', 'TESTING', 'LIVE'] as const
 const STATUS_FLOW: Record<string, { next: string; action: string } | null> = {
   DRAFT: { next: 'TESTING', action: 'Start testing' },
   TESTING: { next: 'LIVE', action: 'Mark as live' },
   LIVE: null,
 }
 
-const stepConfig: Record<StepType, { icon: React.ReactNode; label: string; color: string; border: string; bg: string }> = {
+const stepConfig: Record<StepType, {
+  icon: React.ReactNode
+  label: string
+  color: string
+  accentBorder: string
+  iconBg: string
+}> = {
   TRIGGER: {
     icon: <Zap className="h-3.5 w-3.5" />,
     label: 'Trigger',
     color: 'text-amber-600',
-    border: 'border-amber-200',
-    bg: 'bg-amber-50',
+    accentBorder: 'border-l-amber-400',
+    iconBg: 'bg-amber-50 border-amber-200',
   },
   AI: {
     icon: <Zap className="h-3.5 w-3.5" />,
     label: 'AI',
     color: 'text-[#c4621a]',
-    border: 'border-[#c4621a]/20',
-    bg: 'bg-[#c4621a]/5',
+    accentBorder: 'border-l-[#c4621a]',
+    iconBg: 'bg-[#c4621a]/5 border-[#c4621a]/20',
   },
   HUMAN: {
     icon: <User className="h-3.5 w-3.5" />,
     label: 'Human',
     color: 'text-blue-600',
-    border: 'border-blue-200',
-    bg: 'bg-blue-50',
+    accentBorder: 'border-l-blue-400',
+    iconBg: 'bg-blue-50 border-blue-200',
   },
   INTEGRATION: {
     icon: <ArrowRightLeft className="h-3.5 w-3.5" />,
     label: 'Integration',
     color: 'text-purple-600',
-    border: 'border-purple-200',
-    bg: 'bg-purple-50',
+    accentBorder: 'border-l-purple-400',
+    iconBg: 'bg-purple-50 border-purple-200',
   },
   OUTPUT: {
     icon: <CheckCircle2 className="h-3.5 w-3.5" />,
     label: 'Output',
     color: 'text-green-600',
-    border: 'border-green-200',
-    bg: 'bg-green-50',
+    accentBorder: 'border-l-green-400',
+    iconBg: 'bg-green-50 border-green-200',
   },
 }
 
@@ -92,7 +99,7 @@ const stepHints: Record<StepType, (tool: string | null) => string> = {
 }
 
 function StepHint({ type, tool }: { type: StepType; tool: string | null }) {
-  if (type === 'AI') return null // AI steps have their own detailed UI below
+  if (type === 'AI') return null
   const hint = stepHints[type](tool)
   return (
     <p className="text-xs text-muted-foreground/70 italic border-t border-border/30 pt-2 mt-1">{hint}</p>
@@ -113,6 +120,8 @@ function StepCard({ step, workflowId }: { step: WorkflowStep; workflowId: string
   const [running, setRunning] = useState(false)
   const [currentPrompt, setCurrentPrompt] = useState(step.prompt)
   const [promptVersion, setPromptVersion] = useState(step.promptVersion)
+
+  const isLongPrompt = (currentPrompt?.length ?? 0) > 500
 
   const copy = async () => {
     if (!currentPrompt) return
@@ -176,18 +185,18 @@ function StepCard({ step, workflowId }: { step: WorkflowStep; workflowId: string
   }
 
   return (
-    <div className={`rounded-xl border ${cfg.border} bg-card overflow-hidden`}>
+    <div className={`rounded-xl border border-border border-l-4 ${cfg.accentBorder} bg-card overflow-hidden`}>
       {/* Step header */}
-      <div className={`px-4 py-3 flex items-start justify-between gap-3 ${cfg.bg}`}>
+      <div className="px-4 py-3 flex items-start justify-between gap-3">
         <div className="flex items-start gap-3 min-w-0">
-          <div className={`mt-0.5 h-6 w-6 rounded-md flex items-center justify-center shrink-0 ${cfg.bg} border ${cfg.border} ${cfg.color}`}>
+          <div className={`mt-0.5 h-5 w-5 rounded-md flex items-center justify-center shrink-0 border ${cfg.iconBg} ${cfg.color}`}>
             {cfg.icon}
           </div>
           <div className="min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
               <span className={`text-xs font-semibold uppercase tracking-wide ${cfg.color}`}>{cfg.label}</span>
               {step.tool && (
-                <span className="text-xs bg-white/70 border border-black/10 text-foreground/70 px-2 py-0.5 rounded-md">
+                <span className="text-xs bg-muted border text-muted-foreground px-2 py-0.5 rounded-md">
                   {step.tool}
                 </span>
               )}
@@ -195,7 +204,7 @@ function StepCard({ step, workflowId }: { step: WorkflowStep; workflowId: string
             <p className="font-medium text-sm mt-0.5 text-foreground">{step.title}</p>
           </div>
         </div>
-        <span className="text-xs text-muted-foreground shrink-0 mt-1">#{step.order + 1}</span>
+        <span className="text-xs text-muted-foreground/50 shrink-0 mt-1 font-mono">#{step.order + 1}</span>
       </div>
 
       {/* Description */}
@@ -206,31 +215,41 @@ function StepCard({ step, workflowId }: { step: WorkflowStep; workflowId: string
 
       {/* AI step extras */}
       {step.type === 'AI' && currentPrompt && (
-        <div className="px-4 pb-4 space-y-3 border-t border-border/50 pt-3">
-          {/* Prompt */}
-          <div className="space-y-1.5">
-            <div className="flex items-center justify-between">
-              <button
-                onClick={() => setExpanded(!expanded)}
-                className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
-              >
-                {expanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
-                Prompt v{promptVersion}
-              </button>
+        <div className="px-4 pb-4 space-y-4 border-t border-border/50 pt-3">
+          {/* Dark code block */}
+          <div className="rounded-lg bg-zinc-950 border border-zinc-800 overflow-hidden">
+            <div className="flex items-center justify-between px-4 py-2 border-b border-zinc-800">
               <div className="flex items-center gap-2">
+                <span className="text-xs text-zinc-500 font-mono">prompt</span>
+                <span className="text-xs text-zinc-600 font-mono">v{promptVersion}</span>
+              </div>
+              <div className="flex items-center gap-3">
+                {isLongPrompt && (
+                  <button
+                    onClick={() => setExpanded(!expanded)}
+                    className="flex items-center gap-1 text-xs text-zinc-400 hover:text-zinc-200 transition-colors"
+                  >
+                    {expanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                    {expanded ? 'Collapse' : 'Expand'}
+                  </button>
+                )}
                 <button
                   onClick={copy}
-                  className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                  className="flex items-center gap-1 text-xs text-zinc-400 hover:text-zinc-200 transition-colors"
                 >
-                  {copied ? <Check className="h-3 w-3 text-green-600" /> : <Copy className="h-3 w-3" />}
+                  {copied ? <Check className="h-3 w-3 text-green-400" /> : <Copy className="h-3 w-3" />}
                   {copied ? 'Copied' : 'Copy'}
                 </button>
               </div>
             </div>
-
-            {expanded && (
-              <div className="bg-muted rounded-lg p-3 font-mono text-xs leading-relaxed">
-                <pre className="whitespace-pre-wrap">{currentPrompt}</pre>
+            <pre className={`px-4 py-3 text-xs text-zinc-300 leading-relaxed whitespace-pre-wrap font-mono overflow-x-auto ${isLongPrompt && !expanded ? 'max-h-32 overflow-y-hidden' : ''}`}>
+              {currentPrompt}
+            </pre>
+            {isLongPrompt && !expanded && (
+              <div className="px-4 pb-2">
+                <button onClick={() => setExpanded(true)} className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors">
+                  Show full prompt…
+                </button>
               </div>
             )}
           </div>
@@ -255,9 +274,11 @@ function StepCard({ step, workflowId }: { step: WorkflowStep; workflowId: string
               {running ? 'Running…' : 'Run'}
             </Button>
             {runOutput && (
-              <div className="bg-muted rounded-lg p-3">
-                <p className="text-xs font-medium text-muted-foreground mb-1.5">Output</p>
-                <pre className="whitespace-pre-wrap font-mono text-xs leading-relaxed">{runOutput}</pre>
+              <div className="rounded-lg bg-zinc-950 border border-zinc-800 overflow-hidden">
+                <div className="px-4 py-2 border-b border-zinc-800">
+                  <span className="text-xs text-zinc-500 font-mono">output</span>
+                </div>
+                <pre className="px-4 py-3 whitespace-pre-wrap font-mono text-xs text-zinc-300 leading-relaxed">{runOutput}</pre>
               </div>
             )}
           </div>
@@ -298,12 +319,8 @@ function StepCard({ step, workflowId }: { step: WorkflowStep; workflowId: string
 
 function Connector() {
   return (
-    <div className="flex justify-center py-1">
-      <div className="flex flex-col items-center gap-0.5">
-        <div className="w-px h-3 bg-border" />
-        <ArrowRight className="h-3 w-3 text-muted-foreground/40 rotate-90" />
-        <div className="w-px h-3 bg-border" />
-      </div>
+    <div className="flex justify-center py-0.5">
+      <div className="w-px h-6 bg-border/50" />
     </div>
   )
 }
@@ -378,12 +395,7 @@ export function WorkflowClient({
   const [advancing, setAdvancing] = useState(false)
 
   const statusFlow = STATUS_FLOW[status]
-
-  const statusColors: Record<string, string> = {
-    DRAFT: 'bg-gray-100 text-gray-600',
-    TESTING: 'bg-blue-100 text-blue-800',
-    LIVE: 'bg-green-100 text-green-800',
-  }
+  const currentIdx = STATUS_STEPS.indexOf(status as typeof STATUS_STEPS[number])
 
   const advanceStatus = async () => {
     setAdvancing(true)
@@ -404,14 +416,28 @@ export function WorkflowClient({
 
   return (
     <div className="space-y-6">
-      {/* Status bar */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2.5">
-          <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${statusColors[status]}`}>{status}</span>
-          <span className="text-xs text-muted-foreground">{steps.length} steps · {ratings.length} ratings</span>
-        </div>
+      {/* Status progression track */}
+      <div className="flex items-center gap-1 flex-wrap">
+        {STATUS_STEPS.map((s, i) => (
+          <div key={s} className="flex items-center gap-1">
+            <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+              i === currentIdx
+                ? 'bg-primary text-primary-foreground'
+                : i < currentIdx
+                ? 'text-muted-foreground'
+                : 'text-muted-foreground/40'
+            }`}>
+              {i < currentIdx && <Check className="h-3 w-3" />}
+              {s}
+            </div>
+            {i < STATUS_STEPS.length - 1 && (
+              <div className={`h-px w-5 ${i < currentIdx ? 'bg-border' : 'bg-border/40'}`} />
+            )}
+          </div>
+        ))}
+        <span className="text-xs text-muted-foreground ml-2">{steps.length} steps · {ratings.length} ratings</span>
         {statusFlow && (
-          <Button size="sm" variant="outline" className="gap-1.5" onClick={advanceStatus} disabled={advancing}>
+          <Button size="sm" variant="outline" className="ml-auto gap-1.5" onClick={advanceStatus} disabled={advancing}>
             {advancing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ArrowRight className="h-3.5 w-3.5" />}
             {statusFlow.action}
           </Button>
@@ -424,8 +450,8 @@ export function WorkflowClient({
       )}
 
       {/* How to use */}
-      <div className="rounded-lg border border-border bg-muted/30 px-4 py-3 space-y-1.5">
-        <p className="text-xs font-semibold text-foreground/70 uppercase tracking-wide">How to use this</p>
+      <div className="rounded-lg border px-4 py-3 space-y-1.5">
+        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">How to use</p>
         <ul className="space-y-1 text-xs text-muted-foreground">
           <li><span className="font-medium text-foreground/80">Manually</span> — follow the steps as a checklist. Run AI prompts yourself, complete human steps, perform integrations.</li>
           <li><span className="font-medium text-foreground/80">Semi-automated</span> — use the AI prompts in Claude or ChatGPT, trigger integrations by hand.</li>

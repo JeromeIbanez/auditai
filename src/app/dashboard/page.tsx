@@ -7,17 +7,17 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { Separator } from '@/components/ui/separator'
-import { Zap, Clock, FileText, ArrowRight } from 'lucide-react'
+import { Zap, ArrowRight, ArrowUpRight, Plus } from 'lucide-react'
 import { ActivateButton } from '@/app/audit/[id]/_components/activate-button'
 import { DeleteButton } from '@/components/delete-button'
 import { AppShell } from '@/components/app-shell'
 
 export const metadata = { title: 'Dashboard — AuditAI' }
 
-const workflowStatusColors: Record<string, string> = {
-  DRAFT: 'bg-gray-100 text-gray-600',
-  TESTING: 'bg-blue-100 text-blue-800',
-  LIVE: 'bg-green-100 text-green-800',
+const statusDot: Record<string, string> = {
+  LIVE: 'bg-green-500',
+  TESTING: 'bg-blue-500',
+  DRAFT: 'bg-gray-300',
 }
 const workflowStatusBorder: Record<string, string> = {
   DRAFT: '',
@@ -106,11 +106,20 @@ export default async function DashboardPage() {
   return (
     <AppShell>
       <main className="max-w-3xl mx-auto px-8 py-10 space-y-8">
-        <div>
-          <h1 className="text-xl font-semibold tracking-tight">
-            {data?.companyName ? `${data.companyName}` : 'Dashboard'}
-          </h1>
-          <p className="text-sm text-muted-foreground mt-0.5">Your AI workflow overview</p>
+
+        {/* Page header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-xl font-semibold tracking-tight">
+              {data?.companyName ?? 'Dashboard'}
+            </h1>
+            <p className="text-sm text-muted-foreground mt-0.5">Your AI workflow overview</p>
+          </div>
+          <Link href="/audit">
+            <Button size="sm" className="gap-1.5">
+              <Plus className="h-3.5 w-3.5" /> New audit
+            </Button>
+          </Link>
         </div>
 
         {dbError && (
@@ -125,42 +134,23 @@ export default async function DashboardPage() {
           </Card>
         )}
 
-        {/* Stats */}
+        {/* Stats strip */}
         {data && (
-          <div className="grid grid-cols-3 gap-4">
-            <Card className="shadow-sm">
-              <CardContent className="pt-5 pb-5">
-                <div className="flex items-center justify-between mb-3">
-                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Audits</p>
-                  <div className="h-7 w-7 rounded-md bg-primary/10 flex items-center justify-center">
-                    <FileText className="h-3.5 w-3.5 text-primary" />
-                  </div>
-                </div>
-                <p className="text-3xl font-bold tracking-tight">{data.audits.length}</p>
-              </CardContent>
-            </Card>
-            <Card className="shadow-sm">
-              <CardContent className="pt-5 pb-5">
-                <div className="flex items-center justify-between mb-3">
-                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Workflows</p>
-                  <div className="h-7 w-7 rounded-md bg-primary/10 flex items-center justify-center">
-                    <Zap className="h-3.5 w-3.5 text-primary" />
-                  </div>
-                </div>
-                <p className="text-3xl font-bold tracking-tight">{data.workflows.length}</p>
-              </CardContent>
-            </Card>
-            <Card className="shadow-sm">
-              <CardContent className="pt-5 pb-5">
-                <div className="flex items-center justify-between mb-3">
-                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Hours saved</p>
-                  <div className="h-7 w-7 rounded-md bg-primary/10 flex items-center justify-center">
-                    <Clock className="h-3.5 w-3.5 text-primary" />
-                  </div>
-                </div>
-                <p className="text-3xl font-bold tracking-tight">{data.totalHoursSaved > 0 ? `${data.totalHoursSaved}h` : '—'}</p>
-              </CardContent>
-            </Card>
+          <div className="grid grid-cols-3 divide-x divide-border rounded-xl border bg-card shadow-sm">
+            <div className="px-6 py-5">
+              <p className="text-xs text-muted-foreground mb-1">Audits</p>
+              <p className="text-3xl font-bold tracking-tight">{data.audits.length}</p>
+            </div>
+            <div className="px-6 py-5">
+              <p className="text-xs text-muted-foreground mb-1">Workflows</p>
+              <p className="text-3xl font-bold tracking-tight">{data.workflows.length}</p>
+            </div>
+            <div className="px-6 py-5">
+              <p className="text-xs text-muted-foreground mb-1">Hours saved</p>
+              <p className="text-3xl font-bold tracking-tight">
+                {data.totalHoursSaved > 0 ? `${data.totalHoursSaved}h` : '—'}
+              </p>
+            </div>
           </div>
         )}
 
@@ -188,24 +178,23 @@ export default async function DashboardPage() {
         {data && data.workflows.length > 0 && (
           <section className="space-y-3">
             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Workflows</p>
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               {data.workflows.map((w) => (
                 <Card key={w.id} className={`transition-shadow hover:shadow-sm ${workflowStatusBorder[w.status]}`}>
                   <CardContent className="py-3 px-5 flex items-center justify-between gap-4">
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
+                        <span className={`h-2 w-2 rounded-full shrink-0 ${statusDot[w.status]}`} />
                         <p className="font-medium text-sm truncate">{w.taskName}</p>
-                        <Badge variant="secondary" className="text-xs shrink-0">{w.department}</Badge>
-                        <Badge className={`text-xs shrink-0 ${workflowStatusColors[w.status]}`}>{w.status}</Badge>
                       </div>
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        {w.steps.length} steps · {w.ratings.length} ratings · {w.runsCount} runs
+                      <p className="text-xs text-muted-foreground mt-0.5 pl-4">
+                        {w.department} · {w.steps.length} steps · {w.runsCount} runs
                       </p>
                     </div>
-                    <div className="flex items-center gap-1.5 shrink-0">
+                    <div className="flex items-center gap-1 shrink-0">
                       <Link href={`/workflow/${w.id}`}>
-                        <Button size="sm" variant="outline" className="gap-1.5">
-                          Open <ArrowRight className="h-3.5 w-3.5" />
+                        <Button size="icon" variant="ghost" className="h-8 w-8">
+                          <ArrowUpRight className="h-4 w-4" />
                         </Button>
                       </Link>
                       <DeleteButton endpoint={`/api/workflow/${w.id}`} label="Delete" />
@@ -221,23 +210,23 @@ export default async function DashboardPage() {
         {data && data.openOpportunities.length > 0 && (
           <section className="space-y-3">
             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Open opportunities</p>
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               {data.openOpportunities.map((t) => (
                 <Card key={t.id}>
                   <CardContent className="py-3 px-5 flex items-center justify-between gap-4">
-                    <div className="min-w-0 flex-1 space-y-1.5">
+                    <div className="min-w-0 flex-1 space-y-2">
                       <div className="flex items-center gap-2">
                         <p className="font-medium text-sm truncate">{t.name}</p>
                         <Badge className={`text-xs shrink-0 ${applicabilityColors[t.applicability]}`}>
                           {t.applicability}
                         </Badge>
                       </div>
-                      <div className="flex items-center gap-3">
-                        <p className="text-xs text-muted-foreground">{t.department} · {t.totalScore}/42</p>
-                        <Progress value={(t.totalScore / 42) * 100} className="h-1 flex-1 max-w-[80px]" />
+                      <div className="flex items-center gap-2">
+                        <Progress value={(t.totalScore / 42) * 100} className="h-2 flex-1" />
+                        <span className="text-xs text-muted-foreground shrink-0">{t.totalScore}/42</span>
                       </div>
                     </div>
-                    <div className="flex items-center gap-1.5 shrink-0">
+                    <div className="flex items-center gap-1.5 shrink-0 ml-4">
                       <ActivateButton auditId={t.auditId} taskId={t.id} />
                       <DeleteButton endpoint={`/api/task/${t.id}`} label="Delete" />
                     </div>
@@ -257,18 +246,16 @@ export default async function DashboardPage() {
               {data.audits.map((a) => {
                 const workflowCount = a.tasks.reduce((n, t) => n + t.workflows.length, 0)
                 return (
-                  <div key={a.id} className="flex items-center justify-between gap-4 py-2.5 px-2 rounded-lg hover:bg-muted/50 transition-colors group">
-                    <Link href={`/audit/${a.id}`} className="flex items-center gap-2 min-w-0 flex-1">
+                  <Link key={a.id} href={`/audit/${a.id}`}>
+                    <div className="flex items-center justify-between gap-4 py-2.5 px-3 rounded-lg hover:bg-muted/50 transition-colors group">
                       <span className="font-medium text-sm truncate">{a.department}</span>
-                      <Badge variant="secondary" className="text-xs shrink-0">{a.department}</Badge>
-                    </Link>
-                    <div className="flex items-center gap-3 shrink-0 text-xs text-muted-foreground">
-                      <span>{a.tasks.length} tasks · {workflowCount} workflows</span>
-                      <span>{new Date(a.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</span>
-                      <Link href={`/audit/${a.id}`}><ArrowRight className="h-3.5 w-3.5" /></Link>
-                      <DeleteButton endpoint={`/api/audit/${a.id}`} redirectTo="/dashboard" label="Delete" />
+                      <div className="flex items-center gap-4 shrink-0 text-xs text-muted-foreground">
+                        <span>{a.tasks.length} tasks · {workflowCount} workflows</span>
+                        <span>{new Date(a.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</span>
+                        <ArrowUpRight className="h-3.5 w-3.5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                      </div>
                     </div>
-                  </div>
+                  </Link>
                 )
               })}
             </div>
