@@ -114,7 +114,7 @@ function TaskChat({ task, context, isScored, onScored }: TaskChatProps) {
       if (!res.ok) throw new Error(await res.text())
       const { justifications: j, ...scores } = await res.json()
       setJustifications(j)
-      onScored({ ...task, ...scores })
+      onScored({ ...task, ...scores, chatContext: JSON.stringify(messages) })
     } catch {
       setError('Failed to extract scores. Try again.')
     } finally {

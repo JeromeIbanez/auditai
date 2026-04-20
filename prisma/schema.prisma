@@ -52,6 +52,8 @@ model AuditTask {
   automationMode AutomationMode
   applicability  Applicability
 
+  chatContext String? @db.Text // JSON-encoded scoring conversation messages
+
   workflows Workflow[]
 }
 
