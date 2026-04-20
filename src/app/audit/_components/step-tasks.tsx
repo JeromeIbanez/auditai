@@ -15,12 +15,12 @@ type Props = {
 }
 
 const defaultScores = {
-  taskVolume: 2,
-  repeatability: 2,
-  dataSensitivity: 2,
-  timeCost: 2,
-  errorRisk: 2,
-  currentTooling: 2,
+  taskVolume: 0,
+  repeatability: 0,
+  dataSensitivity: 0,
+  timeCost: 0,
+  errorRisk: 0,
+  currentTooling: 0,
 }
 
 const SUGGESTIONS: Record<string, string[]> = {
