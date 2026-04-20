@@ -30,7 +30,7 @@ function buildModule(step: Step, index: number): MakeModule {
         mapper: {},
         metadata: {
           designer,
-          restore: { parameters: { hook: { label: `${step.title}${tool} — replace with real app trigger` } } },
+          restore: { parameters: { hook: { label: `⚡ TRIGGER: ${step.title}${tool} — swap for native ${step.tool ?? 'app'} trigger module` } } },
         },
       }
 
@@ -58,7 +58,10 @@ function buildModule(step: Step, index: number): MakeModule {
             messages: [{ role: 'user', content: prevData }],
           }, null, 2),
         },
-        metadata: { designer },
+        metadata: {
+          designer,
+          restore: { parameters: { label: `🤖 AI: ${step.title} — HTTP → Anthropic API (swap for OpenAI module if preferred)` } },
+        },
       }
 
     case 'HUMAN':
@@ -74,7 +77,7 @@ function buildModule(step: Step, index: number): MakeModule {
           restore: {
             parameters: {
               hook: {
-                label: `HUMAN STEP: ${step.title}${tool} — send a notification (email/Slack) then wait for approval`,
+                label: `🙋 HUMAN: ${step.title}${tool} — send notification (email/Slack), then wait for approval webhook`,
               },
             },
           },
@@ -101,7 +104,7 @@ function buildModule(step: Step, index: number): MakeModule {
         },
         metadata: {
           designer,
-          restore: { parameters: { label: `${step.title}${tool} — replace with ${step.tool ?? 'tool'} module` } },
+          restore: { parameters: { label: `🔌 INTEGRATION: ${step.title}${tool} — swap HTTP stub for native ${step.tool ?? 'tool'} module` } },
         },
       }
 
@@ -122,7 +125,7 @@ function buildModule(step: Step, index: number): MakeModule {
         },
         metadata: {
           designer,
-          restore: { parameters: { label: `OUTPUT: ${step.title}${tool} — replace with Slack/email/storage module` } },
+          restore: { parameters: { label: `📤 OUTPUT: ${step.title}${tool} — swap HTTP stub for Slack / email / storage module` } },
         },
       }
   }
