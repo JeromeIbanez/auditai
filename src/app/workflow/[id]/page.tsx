@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { WorkflowClient } from './_components/workflow-client'
+import { DeleteButton } from '@/components/delete-button'
 import { AppShell } from '@/components/app-shell'
 
 type Props = { params: Promise<{ id: string }> }
@@ -47,14 +48,17 @@ export default async function WorkflowPage({ params }: Props) {
           <span className="text-foreground">{workflow.task.name}</span>
         </div>
 
-        <div>
-          <div className="flex items-center gap-3 mb-1.5">
-            <h1 className="text-xl font-semibold tracking-tight">{workflow.task.name}</h1>
-            <Badge className={`text-xs ${workflowStatusColors[workflow.status]}`}>{workflow.status}</Badge>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-3 mb-1.5">
+              <h1 className="text-xl font-semibold tracking-tight">{workflow.task.name}</h1>
+              <Badge className={`text-xs ${workflowStatusColors[workflow.status]}`}>{workflow.status}</Badge>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              {workflow.audit.department} · {workflow.ratings.length} ratings · {workflow.runsCount} runs
+            </p>
           </div>
-          <p className="text-sm text-muted-foreground">
-            {workflow.audit.department} · {workflow.ratings.length} ratings · {workflow.runsCount} runs
-          </p>
+          <DeleteButton endpoint={`/api/workflow/${workflow.id}`} redirectTo={`/audit/${workflow.audit.id}`} label="Delete workflow" />
         </div>
 
         <Separator />
