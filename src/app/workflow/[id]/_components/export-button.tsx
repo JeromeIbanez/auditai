@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Download, FileText, Puzzle, ChevronDown } from 'lucide-react'
 
@@ -9,10 +10,16 @@ type Props = {
 }
 
 export function ExportButton({ workflowId }: Props) {
+  const router = useRouter()
   const [open, setOpen] = useState(false)
 
-  const download = (format: 'guide' | 'make') => {
-    window.location.href = `/api/workflow/${workflowId}/export/${format}`
+  const openGuide = () => {
+    router.push(`/workflow/${workflowId}/guide`)
+    setOpen(false)
+  }
+
+  const downloadMake = () => {
+    window.location.href = `/api/workflow/${workflowId}/export/make`
     setOpen(false)
   }
 
@@ -36,18 +43,18 @@ export function ExportButton({ workflowId }: Props) {
           {/* Dropdown */}
           <div className="absolute right-0 top-full mt-1.5 z-20 w-60 bg-background border rounded-lg shadow-lg overflow-hidden">
             <button
-              onClick={() => download('guide')}
+              onClick={openGuide}
               className="w-full flex items-start gap-3 px-4 py-3 hover:bg-muted/50 transition-colors text-left"
             >
               <FileText className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0" />
               <div>
                 <p className="text-sm font-medium">Setup guide</p>
-                <p className="text-xs text-muted-foreground">Step-by-step instructions (.md)</p>
+                <p className="text-xs text-muted-foreground">Rendered step-by-step guide (printable)</p>
               </div>
             </button>
             <div className="border-t" />
             <button
-              onClick={() => download('make')}
+              onClick={downloadMake}
               className="w-full flex items-start gap-3 px-4 py-3 hover:bg-muted/50 transition-colors text-left"
             >
               <Puzzle className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0" />
