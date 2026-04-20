@@ -10,6 +10,7 @@ import { Separator } from '@/components/ui/separator'
 import { AlertTriangle, CheckCircle2, Clock } from 'lucide-react'
 import { computeScore, getApplicability, getAutomationMode, MAX_SCORE } from '@/lib/scoring'
 import { ActivateButton } from './_components/activate-button'
+import { DeleteButton } from '@/components/delete-button'
 import { AppShell } from '@/components/app-shell'
 
 type Props = { params: Promise<{ id: string }> }
@@ -67,15 +68,18 @@ export default async function AuditDetailPage({ params }: Props) {
           <span className="text-foreground">{title}</span>
         </div>
 
-        <div>
-          <div className="flex items-center gap-3 mb-1.5">
-            <h1 className="text-xl font-semibold tracking-tight">{title}</h1>
-            <Badge variant="secondary">{audit.department}</Badge>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-3 mb-1.5">
+              <h1 className="text-xl font-semibold tracking-tight">{title}</h1>
+              <Badge variant="secondary">{audit.department}</Badge>
+            </div>
+            <p className="text-muted-foreground text-sm">
+              {audit.teamSize} people · {audit.tasks.length} tasks audited ·{' '}
+              {audit.tools.length > 0 ? audit.tools.join(', ') : 'No tools specified'}
+            </p>
           </div>
-          <p className="text-muted-foreground text-sm">
-            {audit.teamSize} people · {audit.tasks.length} tasks audited ·{' '}
-            {audit.tools.length > 0 ? audit.tools.join(', ') : 'No tools specified'}
-          </p>
+          <DeleteButton endpoint={`/api/audit/${audit.id}`} redirectTo="/dashboard" label="Delete audit" />
         </div>
 
         {/* AI Report */}
@@ -123,6 +127,7 @@ export default async function AuditDetailPage({ params }: Props) {
                     <div className="flex items-center gap-1.5 shrink-0">
                       <Badge className={`text-xs ${applicabilityColors[applicability]}`}>{applicability}</Badge>
                       <Badge className={`text-xs ${modeColors[mode]}`}>{mode}</Badge>
+                      <DeleteButton endpoint={`/api/task/${task.id}`} label="Delete" />
                     </div>
                   </div>
 

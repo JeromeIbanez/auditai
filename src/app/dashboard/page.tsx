@@ -9,6 +9,7 @@ import { Progress } from '@/components/ui/progress'
 import { Separator } from '@/components/ui/separator'
 import { Zap, Clock, FileText, ArrowRight } from 'lucide-react'
 import { ActivateButton } from '@/app/audit/[id]/_components/activate-button'
+import { DeleteButton } from '@/components/delete-button'
 import { AppShell } from '@/components/app-shell'
 
 export const metadata = { title: 'Dashboard — AuditAI' }
@@ -201,11 +202,14 @@ export default async function DashboardPage() {
                         {w.steps.length} steps · {w.ratings.length} ratings · {w.runsCount} runs
                       </p>
                     </div>
-                    <Link href={`/workflow/${w.id}`} className="shrink-0">
-                      <Button size="sm" variant="outline" className="gap-1.5">
-                        Open <ArrowRight className="h-3.5 w-3.5" />
-                      </Button>
-                    </Link>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <Link href={`/workflow/${w.id}`}>
+                        <Button size="sm" variant="outline" className="gap-1.5">
+                          Open <ArrowRight className="h-3.5 w-3.5" />
+                        </Button>
+                      </Link>
+                      <DeleteButton endpoint={`/api/workflow/${w.id}`} label="Delete" />
+                    </div>
                   </CardContent>
                 </Card>
               ))}
@@ -233,8 +237,9 @@ export default async function DashboardPage() {
                         <Progress value={(t.totalScore / 42) * 100} className="h-1 flex-1 max-w-[80px]" />
                       </div>
                     </div>
-                    <div className="shrink-0">
+                    <div className="flex items-center gap-1.5 shrink-0">
                       <ActivateButton auditId={t.auditId} taskId={t.id} />
+                      <DeleteButton endpoint={`/api/task/${t.id}`} label="Delete" />
                     </div>
                   </CardContent>
                 </Card>
@@ -252,19 +257,18 @@ export default async function DashboardPage() {
               {data.audits.map((a) => {
                 const workflowCount = a.tasks.reduce((n, t) => n + t.workflows.length, 0)
                 return (
-                  <Link key={a.id} href={`/audit/${a.id}`}>
-                    <div className="flex items-center justify-between gap-4 py-2.5 px-2 rounded-lg hover:bg-muted/50 transition-colors">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <span className="font-medium text-sm truncate">{a.department}</span>
-                        <Badge variant="secondary" className="text-xs shrink-0">{a.department}</Badge>
-                      </div>
-                      <div className="flex items-center gap-3 shrink-0 text-xs text-muted-foreground">
-                        <span>{a.tasks.length} tasks · {workflowCount} workflows</span>
-                        <span>{new Date(a.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</span>
-                        <ArrowRight className="h-3.5 w-3.5" />
-                      </div>
+                  <div key={a.id} className="flex items-center justify-between gap-4 py-2.5 px-2 rounded-lg hover:bg-muted/50 transition-colors group">
+                    <Link href={`/audit/${a.id}`} className="flex items-center gap-2 min-w-0 flex-1">
+                      <span className="font-medium text-sm truncate">{a.department}</span>
+                      <Badge variant="secondary" className="text-xs shrink-0">{a.department}</Badge>
+                    </Link>
+                    <div className="flex items-center gap-3 shrink-0 text-xs text-muted-foreground">
+                      <span>{a.tasks.length} tasks · {workflowCount} workflows</span>
+                      <span>{new Date(a.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</span>
+                      <Link href={`/audit/${a.id}`}><ArrowRight className="h-3.5 w-3.5" /></Link>
+                      <DeleteButton endpoint={`/api/audit/${a.id}`} redirectTo="/dashboard" label="Delete" />
                     </div>
-                  </Link>
+                  </div>
                 )
               })}
             </div>
