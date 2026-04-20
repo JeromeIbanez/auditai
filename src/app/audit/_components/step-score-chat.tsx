@@ -6,6 +6,25 @@ import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
 import { Loader2, Send, Check } from 'lucide-react'
 import { AuditContextInput, TaskInput } from '@/lib/types'
+import { computeScore, getApplicability, MAX_SCORE } from '@/lib/scoring'
+
+type Justifications = {
+  taskVolume: string
+  repeatability: string
+  dataSensitivity: string
+  timeCost: string
+  errorRisk: string
+  currentTooling: string
+}
+
+const DIMENSION_LABELS: Record<keyof Justifications, string> = {
+  taskVolume: 'Task volume',
+  repeatability: 'Repeatability',
+  dataSensitivity: 'Data sensitivity',
+  timeCost: 'Time cost',
+  errorRisk: 'Error risk',
+  currentTooling: 'Current tooling',
+}
 
 type ChatMessage = { role: 'user' | 'assistant'; content: string }
 
@@ -23,6 +42,7 @@ function TaskChat({ task, context, isScored, onScored }: TaskChatProps) {
   const [extracting, setExtracting] = useState(false)
   const [exchangeCount, setExchangeCount] = useState(0)
   const [error, setError] = useState('')
+  const [justifications, setJustifications] = useState<Justifications | null>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -92,13 +112,55 @@ function TaskChat({ task, context, isScored, onScored }: TaskChatProps) {
         body: JSON.stringify({ task: { name: task.name }, context, messages }),
       })
       if (!res.ok) throw new Error(await res.text())
-      const scores = await res.json()
+      const { justifications: j, ...scores } = await res.json()
+      setJustifications(j)
       onScored({ ...task, ...scores })
     } catch {
       setError('Failed to extract scores. Try again.')
     } finally {
       setExtracting(false)
     }
+  }
+
+  if (isScored && justifications) {
+    const score = computeScore(task)
+    const applicability = getApplicability(task)
+    const applicabilityColor = applicability === 'HIGH' ? 'text-green-700' : applicability === 'MEDIUM' ? 'text-yellow-700' : 'text-gray-500'
+    const scoreBarColor = applicability === 'HIGH' ? 'bg-green-500' : applicability === 'MEDIUM' ? 'bg-yellow-500' : 'bg-gray-300'
+
+    return (
+      <div className="border rounded-lg overflow-hidden">
+        <div className="bg-green-50 border-b border-green-100 px-4 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Check className="h-4 w-4 text-green-600 shrink-0" />
+            <span className="text-sm font-medium text-green-800">{task.name}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className={`text-xs font-semibold ${applicabilityColor}`}>{applicability}</span>
+            <span className="text-xs text-muted-foreground">{score}/{MAX_SCORE}</span>
+          </div>
+        </div>
+        <div className="px-4 py-1">
+          <div className="h-1 rounded-full bg-muted mt-2 mb-3">
+            <div className={`h-1 rounded-full ${scoreBarColor}`} style={{ width: `${(score / MAX_SCORE) * 100}%` }} />
+          </div>
+        </div>
+        <div className="px-4 pb-4 space-y-2">
+          {(Object.keys(justifications) as (keyof Justifications)[]).map((key) => {
+            const dimScore = task[key] as number
+            return (
+              <div key={key} className="flex items-start gap-3 text-sm">
+                <div className="flex items-center gap-1.5 shrink-0 w-36">
+                  <span className="text-muted-foreground text-xs">{DIMENSION_LABELS[key]}</span>
+                  <span className="font-semibold text-xs">{dimScore}/3</span>
+                </div>
+                <p className="text-xs text-muted-foreground leading-relaxed">{justifications[key]}</p>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+    )
   }
 
   if (isScored) {
