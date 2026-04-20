@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { WorkflowClient } from './_components/workflow-client'
 import { DeleteButton } from '@/components/delete-button'
+import { ExportButton } from './_components/export-button'
 import { AppShell } from '@/components/app-shell'
 
 type Props = { params: Promise<{ id: string }> }
@@ -58,7 +59,10 @@ export default async function WorkflowPage({ params }: Props) {
               {workflow.audit.department} · {workflow.ratings.length} ratings · {workflow.runsCount} runs
             </p>
           </div>
-          <DeleteButton endpoint={`/api/workflow/${workflow.id}`} redirectTo={`/audit/${workflow.audit.id}`} label="Delete workflow" />
+          <div className="flex items-center gap-2">
+            <ExportButton workflowId={workflow.id} />
+            <DeleteButton endpoint={`/api/workflow/${workflow.id}`} redirectTo={`/audit/${workflow.audit.id}`} label="Delete workflow" />
+          </div>
         </div>
 
         <Separator />
