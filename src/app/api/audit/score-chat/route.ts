@@ -23,11 +23,16 @@ Rules:
 - After 3 user replies, summarize what you've learned and ask if there's anything else
 - Be warm and brief`
 
+  // AI SDK requires at least one message — inject a starter for the opening turn
+  const effectiveMessages = messages.length === 0
+    ? [{ role: 'user' as const, content: 'Please begin.' }]
+    : messages
+
   try {
     const { textStream } = streamText({
       model: getModel(),
       system: systemPrompt,
-      messages,
+      messages: effectiveMessages,
       onError: ({ error }) => console.error('[audit/score-chat] streamText error', error),
     })
     return new Response(textStream, { headers: { 'Content-Type': 'text/plain; charset=utf-8' } })
